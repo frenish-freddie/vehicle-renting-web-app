@@ -90,7 +90,7 @@ export default function OwnerDashboard() {
     );
   }
 
-  const { total_vehicles, active_bookings, total_earnings, recent_requests, vehicles } = dashboardStats;
+  const { total_vehicles, active_bookings, total_earnings, recent_requests = [], vehicles = [] } = dashboardStats;
 
   return (
     <div className="space-y-6">

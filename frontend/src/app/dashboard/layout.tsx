@@ -26,7 +26,7 @@ export default function DashboardLayout({
 
   if (!user) {
     return (
-      <div className="flex h-screen items-center justify-center text-primary-500">
+      <div className="flex h-screen items-center justify-center text-brand-green">
         <span className="animate-pulse font-semibold">Validating credentials session...</span>
       </div>
     );
@@ -46,14 +46,14 @@ export default function DashboardLayout({
         <aside className="w-full md:w-[260px] shrink-0 bg-white border border-neutral-200/50 rounded-3xl p-5 shadow-sm dark:bg-neutral-900 dark:border-neutral-800/80">
           {/* User Meta */}
           <div className="flex items-center gap-3 pb-4 mb-6 border-b border-neutral-100 dark:border-neutral-850">
-            <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-950 flex items-center justify-center text-primary-600 dark:text-primary-400 font-extrabold">
+            <div className="h-10 w-10 rounded-full bg-brand-green/10 dark:bg-brand-green/20 flex items-center justify-center text-brand-green font-extrabold">
               {user.name.charAt(0)}
             </div>
             <div>
               <h3 className="text-sm font-bold text-neutral-900 dark:text-white leading-tight">
                 {user.name}
               </h3>
-              <span className="text-[10px] text-primary-600 dark:text-primary-400 font-bold uppercase tracking-wider mt-0.5 block">
+              <span className="text-[10px] text-brand-green font-bold uppercase tracking-wider mt-0.5 block">
                 {user.role} Dashboard
               </span>
             </div>
@@ -70,7 +70,7 @@ export default function DashboardLayout({
                   href={item.path}
                   className={`flex items-center gap-3 h-10 px-3.5 rounded-xl text-xs font-semibold transition ${
                     isActive
-                      ? "bg-primary-500 text-white shadow-sm shadow-primary-500/10"
+                      ? "bg-brand-green text-white shadow-sm shadow-brand-green/10"
                       : "text-neutral-600 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-850"
                   }`}
                 >

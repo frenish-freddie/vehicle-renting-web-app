@@ -4,17 +4,31 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
-import { User, Lock, Mail, Phone, UserPlus, ShieldAlert, CheckCircle2, Loader2 } from "lucide-react";
+import { User as UserIcon, Lock, Mail, Phone, UserPlus, ShieldAlert, CheckCircle2, Loader2, Eye, EyeOff, Sparkles, ChevronDown } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 
 type UserRole = "guest" | "host" | "driver";
+
+const COUNTRY_CODES = [
+  { code: "+91", country: "India", iso: "in" },
+  { code: "+1", country: "USA/Canada", iso: "us" },
+  { code: "+44", country: "United Kingdom", iso: "gb" },
+  { code: "+971", country: "UAE", iso: "ae" },
+  { code: "+61", country: "Australia", iso: "au" },
+  { code: "+65", country: "Singapore", iso: "sg" },
+  { code: "+81", country: "Japan", iso: "jp" },
+  { code: "+49", country: "Germany", iso: "de" },
+];
 
 export default function Register() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [countryCode, setCountryCode] = useState("+91");
+  const [phoneDigits, setPhoneDigits] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [role, setRole] = useState<UserRole>("guest");
   
   const [isLoading, setIsLoading] = useState(false);
@@ -29,23 +43,65 @@ export default function Register() {
     }
   }, [loginStore.token, loginStore.user, router]);
 
+  const suggestStrongPassword = () => {
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const numbers = "0123456789";
+    const symbols = "!@#$%^&*";
+    
+    let generated = "";
+    
+    // Add guaranteed characters to ensure strength
+    generated += lowercase[Math.floor(Math.random() * lowercase.length)];
+    generated += uppercase[Math.floor(Math.random() * uppercase.length)];
+    generated += numbers[Math.floor(Math.random() * numbers.length)];
+    generated += symbols[Math.floor(Math.random() * symbols.length)];
+    
+    const allChars = lowercase + uppercase + numbers + symbols;
+    for (let i = 0; i < 8; i++) {
+      generated += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    // Shuffle the characters
+    const shuffled = generated.split('').sort(() => 0.5 - Math.random()).join('');
+    
+    setPassword(shuffled);
+    setShowPassword(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password || !phone) {
+    setError(null);
+    setSuccess(null);
+
+    if (!name || !email || !password || !phoneDigits) {
       setError("Please fill out all input fields.");
       return;
     }
 
+    // Email validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    // Phone validation (strictly 10 digits)
+    const digitsOnly = phoneDigits.replace(/\D/g, "");
+    if (digitsOnly.length !== 10) {
+      setError("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
     setIsLoading(true);
-    setError(null);
-    setSuccess(null);
 
     try {
+      const formattedPhone = `${countryCode}${digitsOnly}`;
       await api.post("/api/auth/register", {
         name,
         email,
         password,
-        phone_number: phone,
+        phone: formattedPhone,
         role: role,
       });
 
@@ -116,7 +172,7 @@ export default function Register() {
                 onClick={() => setRole("guest")}
                 className={`border-2 p-4 rounded-2xl cursor-pointer transition-all ${role === 'guest' ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/20' : 'border-neutral-200 hover:border-primary-300 dark:border-neutral-800'}`}
               >
-                <User className={`h-6 w-6 mb-2 ${role === 'guest' ? 'text-primary-600' : 'text-neutral-400'}`} />
+                <UserIcon className={`h-6 w-6 mb-2 ${role === 'guest' ? 'text-primary-600' : 'text-neutral-400'}`} />
                 <h4 className="font-bold text-neutral-900 dark:text-white mb-1">Renter</h4>
                 <p className="text-xs text-neutral-500">I want to rent vehicles for my trips.</p>
               </div>
@@ -148,7 +204,7 @@ export default function Register() {
                 Full Name
               </label>
               <div className="flex items-center gap-3 bg-neutral-50 border border-neutral-200/50 h-11 px-3.5 rounded-xl focus-within:border-primary-500 focus-within:bg-white transition dark:bg-neutral-800 dark:border-neutral-700/80 dark:focus-within:bg-neutral-900">
-                <User className="h-4.5 w-4.5 text-neutral-400 shrink-0" />
+                <UserIcon className="h-4.5 w-4.5 text-neutral-400 shrink-0" />
                 <input
                   type="text"
                   required
@@ -165,16 +221,78 @@ export default function Register() {
               <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
                 Phone Number
               </label>
-              <div className="flex items-center gap-3 bg-neutral-50 border border-neutral-200/50 h-11 px-3.5 rounded-xl focus-within:border-primary-500 focus-within:bg-white transition dark:bg-neutral-800 dark:border-neutral-700/80 dark:focus-within:bg-neutral-900">
-                <Phone className="h-4.5 w-4.5 text-neutral-400 shrink-0" />
-                <input
-                  type="tel"
-                  required
-                  placeholder="+91 90000 12345"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full bg-transparent border-none outline-none text-sm text-neutral-800 focus:ring-0 dark:text-white"
-                />
+              <div className="flex items-center gap-2">
+                {/* Custom Country Code Dropdown */}
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="flex items-center gap-2 bg-neutral-50 border border-neutral-200/50 h-11 px-3 rounded-xl hover:bg-neutral-100/50 dark:bg-neutral-800 dark:border-neutral-700/80 dark:hover:bg-neutral-750 transition focus:outline-none"
+                  >
+                    <img 
+                      src={`https://flagcdn.com/w40/${COUNTRY_CODES.find(c => c.code === countryCode)?.iso}.png`} 
+                      alt={COUNTRY_CODES.find(c => c.code === countryCode)?.country || "Flag"} 
+                      className="w-5 h-3.5 object-cover rounded-sm shadow-sm shrink-0"
+                    />
+                    <span className="text-xs font-bold text-neutral-800 dark:text-white">{countryCode}</span>
+                    <ChevronDown className={`h-3 w-3 text-neutral-400 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isDropdownOpen && (
+                    <>
+                      {/* Invisible backdrop to close dropdown on outside click */}
+                      <div 
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setIsDropdownOpen(false)}
+                      />
+                      {/* Floating Dropdown List */}
+                      <div className="absolute left-0 mt-1.5 w-56 max-h-60 overflow-y-auto rounded-xl border border-neutral-200/50 bg-white p-1.5 shadow-xl z-50 dark:border-neutral-800 dark:bg-neutral-900 scrollbar-thin scrollbar-thumb-neutral-200 dark:scrollbar-thumb-neutral-850">
+                        {COUNTRY_CODES.map((item) => (
+                          <button
+                            key={item.code}
+                            type="button"
+                            onClick={() => {
+                              setCountryCode(item.code);
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-2 text-left rounded-lg text-xs transition ${
+                              countryCode === item.code 
+                                ? "bg-primary-50 text-primary-600 dark:bg-primary-950/20 dark:text-primary-400 font-bold" 
+                                : "text-neutral-700 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800/80"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <img 
+                                src={`https://flagcdn.com/w40/${item.iso}.png`} 
+                                alt={item.country} 
+                                className="w-5 h-3.5 object-cover rounded-sm shadow-sm shrink-0"
+                              />
+                              <span>{item.country}</span>
+                            </div>
+                            <span className="text-neutral-400 font-medium">{item.code}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+                
+                {/* 10-Digit Phone Input */}
+                <div className="flex-1 flex items-center gap-2.5 bg-neutral-50 border border-neutral-200/50 h-11 px-3 rounded-xl focus-within:border-primary-500 focus-within:bg-white transition dark:bg-neutral-800 dark:border-neutral-700/80 dark:focus-within:bg-neutral-900">
+                  <Phone className="h-4 w-4 text-neutral-400 shrink-0" />
+                  <input
+                    type="text"
+                    required
+                    maxLength={10}
+                    placeholder="90000 12345"
+                    value={phoneDigits}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      setPhoneDigits(val);
+                    }}
+                    className="w-full bg-transparent border-none outline-none text-sm text-neutral-800 focus:ring-0 dark:text-white"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -199,19 +317,36 @@ export default function Register() {
 
           {/* Password Input */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-              Create Password
-            </label>
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
+                Create Password
+              </label>
+              <button
+                type="button"
+                onClick={suggestStrongPassword}
+                className="text-[10px] font-bold text-primary-600 hover:text-primary-700 hover:underline flex items-center gap-1 dark:text-primary-400 dark:hover:text-primary-300"
+              >
+                <Sparkles className="h-3 w-3 text-yellow-500 animate-pulse" />
+                Suggest Strong Password
+              </button>
+            </div>
             <div className="flex items-center gap-3 bg-neutral-50 border border-neutral-200/50 h-11 px-3.5 rounded-xl focus-within:border-primary-500 focus-within:bg-white transition dark:bg-neutral-800 dark:border-neutral-700/80 dark:focus-within:bg-neutral-900">
               <Lock className="h-4.5 w-4.5 text-neutral-400 shrink-0" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 placeholder="Minimum 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-transparent border-none outline-none text-sm text-neutral-800 focus:ring-0 dark:text-white"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-neutral-400 hover:text-neutral-600 dark:hover:text-white shrink-0 focus:outline-none"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
 
@@ -241,7 +376,6 @@ export default function Register() {
         <button
           type="button"
           onClick={() => {
-            // Mock google sign up just redirects to login for now
             router.push("/login");
           }}
           className="mt-6 w-full h-11 bg-white border border-neutral-200/50 hover:bg-neutral-50 text-neutral-700 font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm transition dark:bg-neutral-850 dark:border-neutral-700/80 dark:hover:bg-neutral-800 dark:text-neutral-200"
@@ -261,37 +395,8 @@ export default function Register() {
             Sign In Here
           </Link>
         </div>
-
-        {/* Dummy Credentials UI */}
-        <div className="mt-8 pt-6 border-t border-neutral-200/50 dark:border-neutral-800/80">
-          <p className="text-[10px] text-center font-bold text-neutral-400 uppercase tracking-wider mb-3">
-            Quick Fill (Test Registration)
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => { setRole("guest"); setName("Test Customer"); setEmail("testcustomer@gmail.com"); setPhone("+91 88888 99999"); setPassword("password123"); }}
-              className="h-10 rounded-xl text-xs font-semibold bg-neutral-50 text-neutral-600 border border-neutral-200/50 hover:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700/80 dark:hover:bg-neutral-750 transition"
-            >
-              Customer
-            </button>
-            <button
-              type="button"
-              onClick={() => { setRole("host"); setName("Test Owner"); setEmail("testowner@gmail.com"); setPhone("+91 77777 66666"); setPassword("password123"); }}
-              className="h-10 rounded-xl text-xs font-semibold bg-neutral-50 text-neutral-600 border border-neutral-200/50 hover:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700/80 dark:hover:bg-neutral-750 transition"
-            >
-              Owner
-            </button>
-            <button
-              type="button"
-              onClick={() => { setRole("driver"); setName("Test Driver"); setEmail("testdriver@gmail.com"); setPhone("+91 66666 55555"); setPassword("password123"); }}
-              className="h-10 rounded-xl text-xs font-semibold bg-neutral-50 text-neutral-600 border border-neutral-200/50 hover:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700/80 dark:hover:bg-neutral-750 transition"
-            >
-              Driver
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
 }
+

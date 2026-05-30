@@ -146,7 +146,7 @@ export default function VehicleDetails() {
             <div className="bg-white border border-border rounded-card overflow-hidden shadow-sm">
               <div className="relative aspect-[21/9] w-full bg-neutral-100">
                 <img
-                  src={vehicle.images || "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=1200"}
+                  src={vehicle.images || "/vehicles/placeholder.jpg"}
                   alt={`${vehicle.brand} ${vehicle.model}`}
                   className="h-full w-full object-cover"
                 />

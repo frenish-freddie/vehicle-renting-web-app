@@ -20,12 +20,11 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
       {/* Vehicle Image Container */}
       <div className="relative h-48 w-full overflow-hidden bg-neutral-100">
         <img
-          src={vehicle.images || "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600"}
+          src={vehicle.images || "/vehicles/placeholder.jpg"}
           alt={`${vehicle.brand} ${vehicle.model}`}
           className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
-            (e.target as HTMLImageElement).src =
-              "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600";
+            (e.target as HTMLImageElement).src = "/vehicles/placeholder.jpg";
           }}
         />
         {/* Rating Badge */}

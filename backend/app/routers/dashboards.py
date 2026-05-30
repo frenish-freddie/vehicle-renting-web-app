@@ -46,7 +46,7 @@ def get_owner_stats(
     db: Session = Depends(get_db)
 ):
     # Owner's vehicles
-    vehicles = db.query(Vehicle).filter(Vehicle.owner_id == current_user.id).all()
+    vehicles = db.query(Vehicle).filter(Vehicle.host_id == current_user.id).all()
     vehicle_ids = [v.id for v in vehicles]
     total_vehicles = len(vehicles)
 

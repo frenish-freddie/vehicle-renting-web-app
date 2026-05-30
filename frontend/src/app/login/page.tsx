@@ -14,12 +14,43 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   useEffect(() => {
     if (loginStore.token && loginStore.user) {
       router.replace(`/dashboard/${loginStore.user.role}`);
     }
   }, [loginStore.token, loginStore.user, router]);
+
+  const handleGoogleLogin = async (googleEmail: string, googlePassword: string) => {
+    setIsGoogleLoading(true);
+    setError(null);
+    try {
+      const response = await api.post("/api/auth/login", { 
+        email: googleEmail, 
+        password: googlePassword 
+      });
+      const { access_token } = response.data;
+      
+      loginStore.login(access_token);
+      
+      setTimeout(() => {
+        const decodedUser = useAuthStore.getState().user;
+        setIsGoogleLoading(false);
+        setShowGoogleModal(false);
+        if (decodedUser) {
+          router.replace(`/dashboard/${decodedUser.role}`);
+        } else {
+          router.replace("/");
+        }
+      }, 1000);
+    } catch (err: any) {
+      setIsGoogleLoading(false);
+      setShowGoogleModal(false);
+      setError("Failed to sign in with Google account.");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,15 +187,7 @@ export default function Login() {
 
         <button
           type="button"
-          onClick={(e) => {
-            const btn = e.currentTarget;
-            setEmail("jane@example.com");
-            setPassword("guest123");
-            setTimeout(() => {
-              const form = btn.previousElementSibling?.previousElementSibling as HTMLFormElement;
-              if (form) form.requestSubmit();
-            }, 50);
-          }}
+          onClick={() => setShowGoogleModal(true)}
           className="mt-6 w-full h-11 bg-white border border-neutral-200/50 hover:bg-neutral-50 text-neutral-700 font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm transition dark:bg-neutral-850 dark:border-neutral-700/80 dark:hover:bg-neutral-800 dark:text-neutral-200"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -182,37 +205,75 @@ export default function Login() {
             Create an Account
           </Link>
         </div>
+      </div>
 
-        {/* Dummy Credentials UI */}
-        <div className="mt-8 pt-6 border-t border-neutral-200/50 dark:border-neutral-800/80">
-          <p className="text-[10px] text-center font-bold text-neutral-400 uppercase tracking-wider mb-3">
-            Quick Login (Test Accounts)
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => { setEmail("jane@example.com"); setPassword("guest123"); }}
-              className="h-10 rounded-xl text-xs font-semibold bg-neutral-50 text-neutral-600 border border-neutral-200/50 hover:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700/80 dark:hover:bg-neutral-750 transition"
-            >
-              Customer
-            </button>
-            <button
-              type="button"
-              onClick={() => { setEmail("host@flexiride.com"); setPassword("host123"); }}
-              className="h-10 rounded-xl text-xs font-semibold bg-neutral-50 text-neutral-600 border border-neutral-200/50 hover:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700/80 dark:hover:bg-neutral-750 transition"
-            >
-              Host / Owner
-            </button>
-            <button
-              type="button"
-              onClick={() => { setEmail("driver@flexiride.com"); setPassword("driver123"); }}
-              className="h-10 rounded-xl text-xs font-semibold bg-neutral-50 text-neutral-600 border border-neutral-200/50 hover:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700/80 dark:hover:bg-neutral-750 transition"
-            >
-              Driver
-            </button>
+      {/* Custom Google Account Chooser Modal */}
+      {showGoogleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl relative animate-in fade-in-50 zoom-in-95 duration-200">
+            
+            {/* Header */}
+            <div className="flex flex-col items-center text-center">
+              <div className="flex gap-0.5 text-xl font-bold tracking-tight mb-2">
+                <span className="text-blue-500">G</span>
+                <span className="text-red-500">o</span>
+                <span className="text-yellow-500">o</span>
+                <span className="text-blue-500">g</span>
+                <span className="text-green-500">l</span>
+                <span className="text-red-500">e</span>
+              </div>
+              <h3 className="text-sm font-bold text-neutral-900 dark:text-white">
+                Choose an account
+              </h3>
+              <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+                to continue to <span className="font-semibold text-primary-500">FlexiRide</span>
+              </p>
+            </div>
+
+            {isGoogleLoading ? (
+              <div className="h-48 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">Authenticating...</p>
+              </div>
+            ) : (
+              <div className="mt-6 space-y-2">
+                {[
+                  { name: "Jane Guest", email: "jane@example.com", pass: "guest123", role: "Renter", initial: "J", color: "bg-purple-500" },
+                  { name: "John Host", email: "host@flexiride.com", pass: "host123", role: "Host / Owner", initial: "J", color: "bg-blue-500" },
+                  { name: "Mike Driver", email: "driver@flexiride.com", pass: "driver123", role: "Driver", initial: "M", color: "bg-emerald-500" },
+                  { name: "Admin User", email: "admin@flexiride.com", pass: "admin123", role: "Administrator", initial: "A", color: "bg-red-500" },
+                ].map((acc) => (
+                  <button
+                    key={acc.email}
+                    type="button"
+                    onClick={() => handleGoogleLogin(acc.email, acc.pass)}
+                    className="w-full flex items-center gap-3 p-3 text-left rounded-xl hover:bg-neutral-50 dark:hover:bg-neutral-800/60 border border-transparent hover:border-neutral-200/50 dark:hover:border-neutral-800/80 transition"
+                  >
+                    <div className={`h-8 w-8 rounded-full ${acc.color} text-white font-bold flex items-center justify-center text-xs shadow-sm shrink-0`}>
+                      {acc.initial}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-neutral-900 dark:text-white truncate">{acc.name}</p>
+                      <p className="text-[10px] text-neutral-500 dark:text-neutral-400 truncate">{acc.email}</p>
+                    </div>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 shrink-0 uppercase tracking-wider">
+                      {acc.role.split(' ')[0]}
+                    </span>
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleModal(false)}
+                  className="w-full mt-4 h-10 text-xs font-semibold hover:bg-neutral-50 dark:hover:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 rounded-xl transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

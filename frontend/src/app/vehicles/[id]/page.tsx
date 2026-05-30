@@ -177,7 +177,7 @@ export default function VehicleDetails() {
           <div className="bg-white border border-neutral-200/50 rounded-3xl overflow-hidden shadow-sm dark:bg-neutral-900 dark:border-neutral-800/80">
             <div className="relative aspect-[21/9] w-full bg-slate-100 dark:bg-neutral-800">
               <img
-                src={vehicle.images || "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=1200"}
+                src={vehicle.images || "/vehicles/placeholder.jpg"}
                 alt={vehicle.vehicle_name}
                 className="h-full w-full object-cover"
               />
