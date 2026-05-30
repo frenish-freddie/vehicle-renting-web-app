@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Google Fonts Import ===== */
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700&family=DM+Sans:wght@400;500;700&family=Oswald:wght@600&display=swap');
+
+/* ===== CSS Custom Properties ===== */
+:root {
+  --font-barlow-condensed: 'Barlow Condensed', system-ui, sans-serif;
+  --font-dm-sans: 'DM Sans', system-ui, sans-serif;
+  --font-oswald: 'Oswald', system-ui, sans-serif;
+
+  /* Brand Theme Colors (Light) */
+  --brand-green: #1B8B3B;
+  --brand-bg: #F2F2F2;
+  --brand-card: #FFFFFF;
+  --brand-text: #1A1A1A;
+  --brand-muted: #666666;
+  --brand-accent: #4B0082;
+  --brand-border: #E5E7EB;
+}
+
+.dark {
+  /* Brand Theme Colors (Dark) */
+  --brand-green: #1B8B3B;
+  --brand-bg: #121212;
+  --brand-card: #1E1E1E;
+  --brand-text: #F2F2F2;
+  --brand-muted: #A3A3A3;
+  --brand-accent: #B388FF;
+  --brand-border: #374151;
+}
+
+/* ===== Base Styles ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #F8F9FC;
+  color: #0F1923;
+  font-family: var(--font-dm-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== Typography Classes ===== */
+.font-display {
+  font-family: var(--font-barlow-condensed);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.font-numbers {
+  font-family: var(--font-oswald);
+}
+
+/* ===== Custom Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 25, 35, 0.25);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 25, 35, 0.5);
+}
+
+/* ===== Selection color ===== */
+::selection {
+  background: rgba(245, 158, 11, 0.3); /* Amber selection */
+  color: #0F1923;
+}
+
+/* Hide scrollbar for horizontal lists */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

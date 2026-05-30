@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlexiRide - Premium Loading Experience</title>
+  <!-- Modern high-contrast typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0b0b16;
+      --card-bg: #121225;
+      --navy-deep: #1a1a2e;
+      --emerald-teal: #1D9E75;
+      --emerald-glow: rgba(29, 158, 117, 0.45);
+      --emerald-light: #3bf1b7;
+      --text-white: #ffffff;
+      --text-muted: #7e94a5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-white);
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      perspective: 1000px;
+    }
+
+    /* Ambient background lights */
+    .bg-light-left {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(29, 158, 117, 0.08) 0%, rgba(29, 158, 117, 0) 70%);
+      left: -100px;
+      top: -100px;
+      pointer-events: none;
+      filter: blur(50px);
+    }
+
+    .bg-light-right {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(29, 158, 117, 0.06) 0%, rgba(29, 158, 117, 0) 75%);
+      right: -150px;
+      bottom: -150px;
+      pointer-events: none;
+      filter: blur(60px);
+    }
+
+    /* Outer glass card wrapper */
+    .loader-container {
+      background: rgba(26, 26, 46, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 50px 60px;
+      border-radius: 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 
+        0 24px 80px rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.05);
+      transform-style: preserve-3d;
+      animation: floatCard 6s ease-in-out infinite;
+      z-index: 10;
+    }
+
+    /* Visual micro-interaction card float */
+    @keyframes floatCard {
+      0%, 100% {
+        transform: translateY(0) rotateX(0deg) rotateY(0deg);
+      }
+      50% {
+        transform: translateY(-8px) rotateX(2deg) rotateY(-1deg);
+      }
+    }
+
+    /* SVG Road / Track Ring */
+    .spinner-svg {
+      width: 220px;
+      height: 220px;
+      filter: drop-shadow(0 0 16px rgba(0, 0, 0, 0.2));
+    }
+
+    /* The thin minimal background track */
+    .track {
+      stroke: rgba(255, 255, 255, 0.03);
+      stroke-width: 4;
+    }
+
+    /* Fine overlay line inside track for a high-tech blueprint road look */
+    .track-inner {
+      stroke: rgba(29, 158, 117, 0.08);
+      stroke-width: 1.5;
+    }
+
+    /* The rotating container group */
+    .rotating-group {
+      transform-origin: 110px 110px;
+      animation: rotateRing 2s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+    }
+
+    @keyframes rotateRing {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* The active gradient arc */
+    .active-arc {
+      stroke-width: 4;
+      stroke-linecap: round;
+      /* Length of arc = 200, track perimeter = 2 * PI * 90 = 565.48 */
+      stroke-dasharray: 200 365.48;
+      stroke-dashoffset: 0;
+    }
+
+    /* The glowing headlights dot traveling along the arc */
+    .vehicle-dot {
+      fill: var(--emerald-light);
+      filter: url(#glowFilter);
+      animation: pulseDot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulseDot {
+      0%, 100% {
+        r: 4.5;
+      }
+      50% {
+        r: 6;
+      }
+    }
+
+    /* Typography inside the circle */
+    .brand-content {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .wordmark {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      color: var(--text-white);
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      margin-left: 0.22em; /* Offsets letter-spacing on last char to center perfectly */
+      background: linear-gradient(135deg, #ffffff 40%, #a3b8cc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: pulseWordmark 3s ease-in-out infinite;
+    }
+
+    @keyframes pulseWordmark {
+      0%, 100% {
+        opacity: 0.95;
+        filter: drop-shadow(0 0 0px rgba(29, 158, 117, 0));
+      }
+      50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 8px rgba(29, 158, 117, 0.2));
+      }
+    }
+
+    .tagline {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.36em;
+      color: var(--text-muted);
+      margin-top: 8px;
+      margin-left: 0.36em;
+      opacity: 0.8;
+      text-transform: uppercase;
+      transition: color 0.3s;
+    }
+
+    /* Below the ring: Loading Indicator with sequential dots */
+    .loading-status {
+      display: flex;
+      align-items: center;
+      margin-top: 32px;
+      gap: 3px;
+    }
+
+    .loading-label {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      color: var(--emerald-teal);
+      text-shadow: 0 0 10px rgba(29, 158, 117, 0.2);
+    }
+
+    .dots-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 4px;
+    }
+
+    .pulsing-dot {
+      width: 4px;
+      height: 4px;
+      background-color: var(--emerald-teal);
+      border-radius: 50%;
+      opacity: 0.25;
+    }
+
+    .pulsing-dot:nth-child(1) {
+      animation: pulseDotSeq 1.4s infinite 0s;
+    }
+
+    .pulsing-dot:nth-child(2) {
+      animation: pulseDotSeq 1.4s infinite 0.2s;
+    }
+
+    .pulsing-dot:nth-child(3) {
+      animation: pulseDotSeq 1.4s infinite 0.4s;
+    }
+
+    @keyframes pulseDotSeq {
+      0%, 100% {
+        opacity: 0.25;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.4);
+        background-color: var(--emerald-light);
+        box-shadow: 0 0 8px var(--emerald-light);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background light layers -->
+  <div class="bg-light-left"></div>
+  <div class="bg-light-right"></div>
+
+  <!-- Central Glass Card -->
+  <div class="loader-container">
+    
+    <!-- SVG Loader -->
+    <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+      
+      <svg class="spinner-svg" viewBox="0 0 220 220">
+        <defs>
+          <!-- Beautiful linear gradient representing tail lights on a track -->
+          <linearGradient id="emeraldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#1D9E75" stop-opacity="0" />
+            <stop offset="50%" stop-color="#1D9E75" stop-opacity="0.3" />
+            <stop offset="85%" stop-color="#1D9E75" stop-opacity="0.75" />
+            <stop offset="100%" stop-color="#3bf1b7" stop-opacity="1" />
+          </linearGradient>
+
+          <!-- SVG glow filter for premium headlight lighting effect -->
+          <filter id="glowFilter" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- 1. Road track background circle (r=90, center=110) -->
+        <circle class="track" cx="110" cy="110" r="90" fill="none" />
+        <circle class="track-inner" cx="110" cy="110" r="90" fill="none" stroke-dasharray="8 6" />
+
+        <!-- 2. Rotating container for synchronous gradient track + glowing headlight -->
+        <g class="rotating-group">
+          
+          <!-- The gradient arc overlay -->
+          <circle class="active-arc" cx="110" cy="110" r="90" fill="none" stroke="url(#emeraldGradient)" />
+
+          <!-- The glowing vehicle dot traveling at the tip of the arc (angle corresponds to tip) -->
+          <!-- For R=90, cx=110, cy=110, an arc of length 200 spans ~127 degrees.
+               x = 110 + 90 * cos(127 degrees) = 110 + 90 * (-0.60) = 56
+               y = 110 + 90 * sin(127 degrees) = 110 + 90 * (0.80) = 182
+          -->
+          <circle class="vehicle-dot" cx="55.8" cy="181.8" r="5" />
+          
+        </g>
+      </svg>
+
+      <!-- Centered wordmark and tagline -->
+      <div class="brand-content">
+        <span class="wordmark">FLEXIRIDE</span>
+        <span class="tagline">Ride Your Way</span>
+      </div>
+
+    </div>
+
+    <!-- Pulsing status loading bar below -->
+    <div class="loading-status">
+      <span class="loading-label">LOADING</span>
+      <div class="dots-container">
+        <div class="pulsing-dot"></div>
+        <div class="pulsing-dot"></div>
+        <div class="pulsing-dot"></div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

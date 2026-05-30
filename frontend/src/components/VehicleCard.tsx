@@ -1,0 +1,85 @@
+import Link from "next/link";
+import { Vehicle } from "@/types";
+import { Star, MapPin, Zap } from "lucide-react";
+
+interface VehicleCardProps {
+  vehicle: Vehicle;
+}
+
+const CATEGORY_LABELS: { [key: string]: string } = {
+  two_wheeler: "Two Wheeler",
+  car: "Car/SUV",
+  commercial: "Commercial",
+  machinery: "Machinery",
+  special: "Special",
+};
+
+export default function VehicleCard({ vehicle }: VehicleCardProps) {
+  return (
+    <div className="group flex flex-col overflow-hidden bg-white border border-border rounded-card shadow-sm hover:shadow-card transition-all">
+      {/* Vehicle Image Container */}
+      <div className="relative h-48 w-full overflow-hidden bg-neutral-100">
+        <img
+          src={vehicle.images || "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600"}
+          alt={`${vehicle.brand} ${vehicle.model}`}
+          className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src =
+              "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600";
+          }}
+        />
+        {/* Rating Badge */}
+        <div className="absolute top-2 left-2 bg-surface/90 backdrop-blur-sm px-2 py-1 rounded badge flex items-center gap-1 z-10 shadow-sm border border-border">
+          <Star className="w-3 h-3 text-accent-amber fill-accent-amber" />
+          <span className="text-[10px] font-bold text-text-primary">4.9</span>
+        </div>
+        {/* Category Label */}
+        <div className="absolute top-2 right-2 bg-primary-dark/80 text-white backdrop-blur-sm px-2 py-1 rounded badge text-[9px] font-bold uppercase tracking-wider z-10 shadow-sm">
+          {CATEGORY_LABELS[vehicle.vehicle_category] || vehicle.vehicle_category}
+        </div>
+        {vehicle.driver_available && (
+          <div className="absolute bottom-2 left-2 bg-driver-gold/90 backdrop-blur-sm text-primary-dark px-2 py-1 rounded badge text-[9px] font-bold uppercase tracking-wider z-10 shadow-sm">
+            Operator/Driver Available
+          </div>
+        )}
+      </div>
+
+      {/* Content Area */}
+      <div className="flex flex-col p-4 flex-1">
+        {/* Name */}
+        <h3 className="font-bold text-lg text-text-primary leading-tight mb-1 truncate">
+          {vehicle.brand} {vehicle.model}
+        </h3>
+        
+        {/* Specifications Badges */}
+        <div className="flex flex-wrap items-center gap-1 mt-2 text-[10px] font-bold text-text-muted">
+          <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.fuel_type}</span>
+          <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.driver_available ? "With Operator" : "Self Drive"}</span>
+          {vehicle.seating_capacity && <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.seating_capacity} Seats</span>}
+          {vehicle.load_capacity > 0 && <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.load_capacity}T Payload</span>}
+        </div>
+
+        {/* Pricing and Button */}
+        <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+          <div>
+            <div className="flex items-baseline gap-1">
+              <span className="font-numbers text-xl font-bold text-primary-dark">
+                ₹{vehicle.base_price}
+              </span>
+              <span className="text-xs text-text-muted font-normal">
+                /day
+              </span>
+            </div>
+          </div>
+
+          <Link
+            href={`/search/${vehicle.id}`}
+            className="bg-primary-dark text-white hover:bg-black font-bold px-5 py-2 rounded-input text-sm shadow-sm transition-colors flex items-center justify-center"
+          >
+            Details
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,68 @@
+# ===========================
+# Python / Backend
+# ===========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec
+
+# Virtual environments
+backend/.venv/
+backend/venv/
+.venv/
+venv/
+env/
+ENV/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files & scratch scripts
+backend/temp/
+backend/temp_images/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# ===========================
+# Node.js / Frontend
+# ===========================
+node_modules/
+frontend/node_modules/
+
+# Next.js build output
+frontend/.next/
+frontend/out/
+.next/
+out/
+
+# TypeScript build info
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# ===========================
+# IDE & OS
+# ===========================
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===========================
+# Misc
+# ===========================
+*.zip
+*.tar.gz
+*.log
