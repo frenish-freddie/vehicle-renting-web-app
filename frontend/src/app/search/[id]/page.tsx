@@ -149,6 +149,9 @@ export default function VehicleDetails() {
                   src={vehicle.images || "/vehicles/placeholder.jpg"}
                   alt={`${vehicle.brand} ${vehicle.model}`}
                   className="h-full w-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "/vehicles/placeholder.jpg";
+                  }}
                 />
               </div>
               <div className="p-8">

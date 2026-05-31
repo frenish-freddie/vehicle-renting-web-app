@@ -299,6 +299,9 @@ def seed_database():
             ),
 
         ]
+        for v in vehicles:
+            v.images = f"/vehicles/{v.brand} {v.model}.jpg"
+
         db.add_all(vehicles)
         db.commit()
 

@@ -295,7 +295,14 @@ export default function BookingCheckoutFlow() {
               
               <div className="flex gap-4 mb-6">
                 <div className="w-20 h-16 rounded bg-neutral-100 overflow-hidden">
-                  <img src={vehicle.images} alt={vehicle.model} className="w-full h-full object-cover" />
+                  <img
+                    src={vehicle.images || "/vehicles/placeholder.jpg"}
+                    alt={vehicle.model}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "/vehicles/placeholder.jpg";
+                    }}
+                  />
                 </div>
                 <div>
                   <h4 className="font-bold text-primary-dark">{vehicle.brand} {vehicle.model}</h4>

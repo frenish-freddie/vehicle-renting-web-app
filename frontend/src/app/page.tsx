@@ -81,7 +81,14 @@ export default function Home() {
             {featuredVehicles.length > 0 ? featuredVehicles.map(vehicle => (
               <div key={vehicle.id} className="bg-brand-card rounded-[16px] shadow-[0_2px_12px_rgba(0,0,0,0.08)] overflow-hidden group hover:-translate-y-1 transition-transform duration-200">
                 <div className="h-48 overflow-hidden relative">
-                  <img src={vehicle.images} alt={vehicle.brand} className="w-full h-full object-cover" />
+                  <img
+                    src={vehicle.images || "/vehicles/placeholder.jpg"}
+                    alt={vehicle.brand}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "/vehicles/placeholder.jpg";
+                    }}
+                  />
                 </div>
                 <div className="p-5">
                   <div className="flex justify-between items-start mb-2">

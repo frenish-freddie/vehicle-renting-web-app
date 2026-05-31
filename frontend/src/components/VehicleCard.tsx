@@ -24,7 +24,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
           alt={`${vehicle.brand} ${vehicle.model}`}
           className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = "/vehicles/placeholder.jpg";
+            e.currentTarget.src = "/vehicles/placeholder.jpg";
           }}
         />
         {/* Rating Badge */}
