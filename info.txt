@@ -1,0 +1,220 @@
+*frontend: Next.js 14 + TypeScript + Tailwind CSS
+*Backend: FastAPI (Python)
+*Database: SQLite 
+*Authentication: JWT Tokens
+*Extra modules:
+ Reviews, Chatbot, Dashboard Analytics, Driver Management, Payment System
+
+
+*working 
+    1)user regester cheyum ( name ,email, password etc okke veche )
+    2) 4 role inde
+        Guest
+        Host
+        Driver
+        Admin
+    3) backend process:-
+        Register Form
+            ↓
+        FastAPI /api/auth/register
+            ↓
+        Email Validation
+            ↓
+        Password Hashing
+            ↓
+        User Saved in Database
+*login
+
+        Email + Password
+            ↓
+        Backend Verification
+            ↓
+        Password Match
+            ↓
+        JWT Token Generated
+            ↓
+        User Logged In
+
+    JWT(JSON web token) stores:-
+        User ID
+        Name
+        Email
+        Role
+    
+*role :- user 
+        Host(car owner)
+        driver
+        Admin(not completed)
+
+
+*vechile caterorising, filtering (spec veche)
+    with/ without driver option inde 
+    images, brand fuel type etc  indakum 
+
+    data flow
+        User Search
+            ↓
+        Backend Query
+            ↓
+        Filtered Vehicles
+            ↓
+        Display Results
+
+
+*Booking ( imp part anu ), ongoing anu 
+
+        1) user egane cheyum ( etrem user select cheyanm )
+            Pickup Date
+            Return Date
+            Pickup Location
+            Drop Location
+            Estimated Distance
+            Driver Required?
+        
+        2)conflict indavthe erikan 
+            Booking Request
+                    ↓
+            Check Existing Bookings
+                    ↓
+            Date Overlap?(if overlap:-reject, else:-clear)
+
+*price calculation
+    
+    Rental Duration
+    Vehicle Cost=(+ Distance Charges
+        + Driver Cost
+        = Total Amount)
+    Distance
+    Driver Charges
+
+
+*booking cycle
+
+        Pending                     Pending
+            ↓
+        Confirmed         or           ↓
+                                    Cancelled
+            ↓
+        Ongoing
+            ↓
+        Completed                     
+
+*driver rental feature 
+        with/without diver
+
+    driver indel       
+   ( Driver Daily Rate × Number of Days ) +vehicle rate
+        
+
+*location support
+        Pickup Locations
+        Drop Locations
+        Delivery Services
+
+                or
+
+        Self Pickup
+
+                or
+
+        Delivered to Customer
+
+*rating (optional )
+ user ine car rate cheyan patum after use 
+ total reviews and average rating edukum
+
+
+*paymet module (in progress)
+
+        Booking Created
+            ↓
+        Payment Initiated
+            ↓
+        Payment Success
+            ↓
+        Booking Confirmed
+
+*Dashboard module 
+     different users ine different dashbord akum 
+     athil oronum athinu anusheriche marum 
+
+*chatbot module 
+        1)backend 
+        chatbot.py
+        chatbot_service.py
+
+        2)purpose and use 
+        Answer Customer Questions
+        Provide Rental Guidance
+        Help Vehicle Selection
+        Support FAQs
+
+
+
+#           DATABASE STRUCTURE 
+    
+
+*main tables:-
+
+    Users
+    Drivers
+    Vehicles
+    Bookings
+    Payments
+    Reviews
+    Locations
+
+*Relationship:
+
+    User
+    │
+    ├── Vehicles (Host)
+    │
+    └── Bookings
+
+    Vehicle
+    │
+    ├── Reviews
+    └── Bookings
+
+    Booking
+    │
+    ├── Payment
+    └── Driver
+
+
+
+*                   Full System Workflow
+
+
+                        User Registers
+                                ↓
+                            Login
+                                ↓
+                            Browse Vehicles
+                                ↓
+                            Filter/Search
+                                ↓
+                            Open Vehicle
+                                ↓
+                            Choose Dates
+                                ↓
+                            Choose Driver (Optional)
+                                ↓
+                            Price Calculation
+                                ↓
+                            Conflict Check
+                                ↓
+                            Booking Created
+                                ↓
+                            Payment
+                                ↓
+                            Booking Confirmed
+                                ↓
+                            Rental Starts
+                                ↓
+                            Rental Completed
+                                ↓
+                            Review Submitted
+
+            
