@@ -12,13 +12,17 @@ export default function NavigationLoader() {
   const searchParams = useSearchParams();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Trigger loader show instantly
   const triggerLoader = () => {
     // Clear any existing active timeouts
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    setLoading(true);
+    
+    // Defer the state update to avoid React synchronous layout constraints
+    // Next.js calls pushState inside useInsertionEffect which forbids synchronous state updates
+    setTimeout(() => {
+      setLoading(true);
+    }, 0);
 
     // Setup safety fallback auto-hide (in case the button does not trigger redirection)
     timeoutRef.current = setTimeout(() => {

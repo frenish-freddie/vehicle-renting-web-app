@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/services/api";
 import { Booking } from "@/types";
-import { Calendar, MapPin, Gauge, AlertCircle, Info, Loader2, ArrowRight, XCircle } from "lucide-react";
+import { Calendar, MapPin, Gauge, AlertCircle, Info, Loader2, ArrowRight, XCircle, BadgeCheck, Clock } from "lucide-react";
 
 const STATUS_BADGES: { [key: string]: { text: string; css: string } } = {
   pending: { text: "Pending Pay", css: "bg-yellow-50 border-yellow-100 text-yellow-600 dark:bg-yellow-950/20 dark:border-yellow-900/30 dark:text-yellow-400" },
@@ -62,6 +62,28 @@ export default function MyBookings() {
     }
   };
 
+  // Phase 1: Pay remaining 70% balance after trip
+  const [payingBalanceId, setPayingBalanceId] = useState<number | null>(null);
+  const handlePayBalance = async (id: number) => {
+    if (!window.confirm("Pay the remaining 70% balance for this booking?")) return;
+    setPayingBalanceId(id);
+    try {
+      await api.post(`/api/bookings/${id}/pay-balance`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBookings((prev) =>
+        prev.map((b) =>
+          b.id === id ? { ...b, balance_payment_status: "paid" } : b
+        )
+      );
+      alert("Balance payment successful! Your booking is now fully paid.");
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Balance payment failed. Please try again.");
+    } finally {
+      setPayingBalanceId(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex h-[400px] items-center justify-center text-primary-500">
@@ -93,7 +115,7 @@ export default function MyBookings() {
           <p className="text-xs text-neutral-400 mt-1">Browse available fleet listings to secure your first booking.</p>
           <button
             onClick={() => router.push("/vehicles")}
-            className="mt-6 bg-primary-500 text-white font-semibold px-4 py-2.5 rounded-lg hover:bg-primary-600 shadow-sm transition"
+            className="mt-6 bg-primary-500 text-white font-semibold px-4 py-2.5 rounded-lg hover:bg-primary-600 shadow-sm transition dark:bg-blue-600 dark:hover:bg-blue-500"
           >
             Find Vehicles
           </button>
@@ -101,7 +123,7 @@ export default function MyBookings() {
       ) : (
         <div className="space-y-4">
           {bookings.map((booking) => {
-            const badge = STATUS_BADGES[booking.booking_status] || { text: booking.booking_status, css: "bg-slate-100" };
+            const badge = STATUS_BADGES[booking.booking_status] || { text: booking.booking_status, css: "bg-slate-100 dark:bg-neutral-800 dark:text-neutral-200" };
             return (
               <div
                 key={booking.id}
@@ -117,6 +139,19 @@ export default function MyBookings() {
                       Booking ID: #{booking.id}
                     </span>
                   </div>
+
+                  {/* Phase 1: Partial Payment Status pill */}
+                  {booking.balance_payment_status === "paid" ? (
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-green-600 dark:text-green-400">
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      Fully Paid
+                    </div>
+                  ) : booking.balance_payment_status === "pending" && booking.remaining_amount ? (
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                      <Clock className="h-3.5 w-3.5" />
+                      30% Paid — Balance ₹{booking.remaining_amount} pending
+                    </div>
+                  ) : null}
 
                   <h3 className="font-bold text-neutral-900 dark:text-white text-base sm:text-lg">
                     {booking.vehicle?.vehicle_name || "Vehicle Rental Transaction"}
@@ -177,6 +212,24 @@ export default function MyBookings() {
                       <span>Cancel Ride</span>
                     </button>
                   )}
+
+                  {/* Phase 1: Pay Balance button — completed trip with pending balance */}
+                  {booking.booking_status === "completed" &&
+                    booking.balance_payment_status === "pending" &&
+                    booking.remaining_amount ? (
+                    <button
+                      onClick={() => handlePayBalance(booking.id)}
+                      disabled={payingBalanceId === booking.id}
+                      className="flex items-center gap-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:hover:bg-amber-950/30 text-xs font-semibold px-4 h-9 rounded-lg border border-amber-200/50 dark:border-amber-900/30 transition shrink-0"
+                    >
+                      {payingBalanceId === booking.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <BadgeCheck className="h-4 w-4" />
+                      )}
+                      <span>Pay Remaining ₹{booking.remaining_amount}</span>
+                    </button>
+                  ) : null}
                 </div>
               </div>
             );

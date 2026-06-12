@@ -92,6 +92,9 @@ function transformResponse(data: any): any {
 }
 
 function transformRequest(data: any): any {
+  if (data instanceof FormData || data instanceof Blob || data instanceof File) {
+    return data;
+  }
   if (Array.isArray(data)) {
     return data.map(item => transformRequest(item));
   } else if (data !== null && typeof data === "object") {
@@ -154,6 +157,22 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    if (error.response?.data?.detail) {
+      const detail = error.response.data.detail;
+      if (Array.isArray(detail)) {
+        error.response.data.detail = detail.map((d: any) => {
+          if (typeof d === "object" && d !== null) {
+            const path = Array.isArray(d.loc) ? d.loc.filter((x: any) => x !== "body" && x !== "query").join(".") : "";
+            return path ? `${path}: ${d.msg}` : d.msg;
+          }
+          return String(d);
+        }).join(", ");
+      } else if (typeof detail === "object" && detail !== null) {
+        error.response.data.detail = detail.message || JSON.stringify(detail);
+      } else {
+        error.response.data.detail = String(detail);
+      }
+    }
     return Promise.reject(error);
   }
 );

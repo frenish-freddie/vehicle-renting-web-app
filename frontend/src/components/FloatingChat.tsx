@@ -88,7 +88,7 @@ export default function FloatingChat() {
             className="mb-4 h-[480px] w-[340px] sm:w-[380px] rounded-2xl bg-white shadow-2xl border border-neutral-200/50 flex flex-col overflow-hidden dark:bg-neutral-900 dark:border-neutral-800/80"
           >
             {/* Chatbot Header */}
-            <div className="bg-primary-600 px-4 py-3 flex items-center justify-between text-white">
+            <div className="bg-primary-600 dark:bg-neutral-800 px-4 py-3 flex items-center justify-between text-white border-b border-transparent dark:border-neutral-700/80">
               <div className="flex items-center gap-2">
                 <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
                   <Sparkles className="h-4 w-4" />
@@ -119,7 +119,7 @@ export default function FloatingChat() {
                   <div
                     className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
                       msg.sender === "user"
-                        ? "bg-primary-500 text-white rounded-br-none"
+                        ? "bg-primary-500 text-white rounded-br-none dark:bg-blue-600"
                         : "bg-white text-neutral-800 border border-neutral-100 dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-700/50 rounded-bl-none"
                     }`}
                   >
@@ -147,7 +147,7 @@ export default function FloatingChat() {
                   <button
                     key={idx}
                     onClick={() => sendMessage(sug)}
-                    className="text-xs bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-950/40 dark:text-primary-400 border border-primary-200/50 dark:border-primary-900/30 px-2.5 py-1 rounded-full transition font-medium"
+                    className="text-xs bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 border border-primary-200/50 dark:border-neutral-700 px-2.5 py-1 rounded-full transition font-medium"
                   >
                     {sug}
                   </button>
@@ -168,11 +168,11 @@ export default function FloatingChat() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ask about rental costs..."
-                className="flex-1 text-sm bg-neutral-100 border border-neutral-200/50 px-3.5 h-10 rounded-xl focus:outline-none focus:border-primary-500 dark:bg-neutral-800 dark:border-neutral-700/80 dark:text-white"
+                className="flex-1 text-sm bg-neutral-100 border border-neutral-200/50 px-3.5 h-10 rounded-xl focus:outline-none focus:border-primary-500 dark:bg-neutral-800 dark:border-neutral-700/80 dark:text-white dark:placeholder:text-neutral-500 dark:focus:border-neutral-600"
               />
               <button
                 type="submit"
-                className="bg-primary-500 text-white rounded-xl p-2.5 hover:bg-primary-600 shadow-sm transition"
+                className="bg-primary-500 text-white rounded-xl p-2.5 hover:bg-primary-600 shadow-sm transition dark:bg-blue-600 dark:hover:bg-blue-500"
               >
                 <Send className="h-4 w-4" />
               </button>
@@ -184,7 +184,7 @@ export default function FloatingChat() {
       {/* Floating Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="h-14 w-14 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-xl hover:bg-primary-600 transition hover:scale-105 active:scale-95"
+        className="h-14 w-14 rounded-full bg-primary-500 text-white flex items-center justify-center shadow-xl hover:bg-primary-600 transition hover:scale-105 active:scale-95 dark:bg-blue-600 dark:hover:bg-blue-500"
         aria-label="Help desk Chatbot"
       >
         <MessageSquare className="h-6 w-6" />

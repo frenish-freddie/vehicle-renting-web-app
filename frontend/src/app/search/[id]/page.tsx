@@ -58,6 +58,16 @@ export default function VehicleDetails() {
     loadDetails();
   }, [id]);
 
+  // Phase 4: Compute duration in hours
+  const durationHours = useMemo(() => {
+    if (startDate && endDate) {
+      const s = new Date(startDate).getTime();
+      const e = new Date(endDate).getTime();
+      return (e - s) / (1000 * 60 * 60);
+    }
+    return 0;
+  }, [startDate, endDate]);
+
   // Compute pricing breakdown in real-time
   const pricingBreakdown = useMemo(() => {
     if (!vehicle) return null;
@@ -275,6 +285,12 @@ export default function VehicleDetails() {
                 </div>
               </div>
 
+              {startDate && endDate && durationHours < 6 && (
+                <p className="text-xs text-red-500 font-bold mt-1">
+                  Minimum booking is 6 hours. Please select a later drop-off time.
+                </p>
+              )}
+
               {/* Optional Driver Toggle */}
               {vehicle.driver_available && (
                 <div className="flex items-center justify-between p-4 bg-driver-gold/10 border border-driver-gold rounded-card mt-2">
@@ -327,10 +343,11 @@ export default function VehicleDetails() {
                 </div>
               )}
 
-              {/* Book trigger button */}
+              {/* Submit / Proceed */}
               <button
                 type="submit"
-                className="w-full h-14 mt-4 bg-accent-amber hover:bg-yellow-500 text-primary-dark font-display font-bold text-xl uppercase tracking-wider rounded-input shadow-md transition-all flex items-center justify-center gap-2"
+                disabled={!startDate || !endDate || durationHours < 6}
+                className="w-full h-14 mt-4 bg-accent-amber hover:bg-yellow-500 text-primary-dark font-display font-bold text-xl uppercase tracking-wider rounded-input shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {token ? "Book & Pay" : "Sign In to Book"}
               </button>

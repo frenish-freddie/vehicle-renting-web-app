@@ -45,6 +45,7 @@ class User(Base):
     wallet_balance = Column(Float, default=0.0)
     referral_code = Column(String, unique=True, nullable=True)
     preferred_language = Column(String, default="English")
+    is_host_approved = Column(Boolean, default=True)  # Admin can suspend host accounts
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     vehicles = relationship("Vehicle", back_populates="owner")
@@ -78,6 +79,10 @@ class Vehicle(Base):
     pickup_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
     delivery_available = Column(Boolean, default=False)
     delivery_charge = Column(Float, default=0.0)
+    # Phase 3: granular delivery settings
+    host_delivery_available  = Column(Boolean, default=False)
+    delivery_fee_per_km      = Column(Float,   default=0.0)
+    max_delivery_radius_km   = Column(Float,   default=0.0)
     
     price_hourly = Column(Float, nullable=True)
     price_daily = Column(Float)
@@ -116,12 +121,18 @@ class Driver(Base):
     is_police_verified = Column(Boolean, default=False)
     is_medically_fit = Column(Boolean, default=False)
     is_approved = Column(Boolean, default=True)
-    
+
+    # ── Verification workflow ─────────────────────────────────────────────────
+    license_url         = Column(String, nullable=True)            # URL/path of uploaded DL image
+    verification_status = Column(String, default="unsubmitted")    # unsubmitted | pending | approved | rejected
+    is_active           = Column(Boolean, default=False)           # True only when admin approves
+
     daily_rate = Column(Float)
     hourly_rate = Column(Float, nullable=True)
     rating_avg = Column(Float, default=0.0)
     total_trips = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 
     user = relationship("User", back_populates="driver_profile")
     driver_bookings = relationship("DriverBooking", back_populates="driver")
@@ -151,10 +162,22 @@ class Booking(Base):
     from_dt = Column(DateTime(timezone=True))
     to_dt = Column(DateTime(timezone=True))
     trip_type = Column(String, default="self") # self, with_driver, operator
+    trip_duration_hours = Column(Float, default=0.0) # Phase 4
     
-    pickup_address = Column(String)
+    # Phase 3: pickup / delivery
+    pickup_type      = Column(String, default="self_pickup")  # 'self_pickup' | 'host_delivery' | 'driver_pickup'
+    pickup_address   = Column(String)
     delivery_address = Column(String, nullable=True)
+    delivery_lat     = Column(Float,  nullable=True)
+    delivery_lng     = Column(Float,  nullable=True)
     
+    # Phase 5: Ongoing Trip Status
+    current_status = Column(String, default="confirmed")
+    expected_return_at = Column(DateTime(timezone=True), nullable=True)
+    actual_return_at = Column(DateTime(timezone=True), nullable=True)
+    is_delayed = Column(Boolean, default=False)
+    delay_minutes = Column(Integer, default=0)
+
     status = Column(Enum(BookingStatusEnum), default=BookingStatusEnum.pending)
     add_ons = Column(String, nullable=True) # JSON
     coupon_code = Column(String, nullable=True)
@@ -162,12 +185,23 @@ class Booking(Base):
     
     base_amount = Column(Float)
     driver_fee = Column(Float, default=0.0)
+    # Phase 2: per-hour driver pricing
+    driver_hourly_rate = Column(Float, default=0.0)  # snapshot of hourly_rate at booking time
+    driver_total_cost  = Column(Float, default=0.0)  # hourly_rate × trip_hours
     delivery_fee = Column(Float, default=0.0)
     gst_amount = Column(Float, default=0.0)
     deposit_amount = Column(Float, default=0.0)
     total_amount = Column(Float)
+    commission_amount = Column(Float, default=0.0)  # 10% of base_amount — platform revenue
     payment_id = Column(String, nullable=True)
-    
+
+    # Phase 1: Partial Payment (30% at booking, 70% after trip)
+    partial_amount          = Column(Float, default=0.0)           # 30% paid at booking
+    remaining_amount        = Column(Float, default=0.0)           # 70% due after trip
+    payment_mode            = Column(String, default="partial")    # always 'partial' for now
+    balance_payment_status  = Column(String, default="pending")    # 'pending' | 'paid'
+    balance_paid_at         = Column(DateTime(timezone=True), nullable=True)
+
     gst_invoice_requested = Column(Boolean, default=False)
     gst_number = Column(String, nullable=True)
     business_name = Column(String, nullable=True)
@@ -178,6 +212,19 @@ class Booking(Base):
     user = relationship("User", back_populates="bookings")
     vehicle = relationship("Vehicle", back_populates="bookings")
     driver = relationship("Driver")
+
+class TripStatusLog(Base):
+    __tablename__ = "trip_status_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id"))
+    status = Column(String, nullable=False)
+    updated_by_role = Column(String, nullable=False)
+    updated_by_id = Column(Integer, nullable=False)
+    note = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    booking = relationship("Booking", backref="status_logs")
 
 class DriverBooking(Base):
     __tablename__ = "driver_bookings"
@@ -242,6 +289,7 @@ class Payment(Base):
     method = Column(String)
     gateway_ref = Column(String)
     status = Column(Enum(PaymentStatusEnum), default=PaymentStatusEnum.pending)
+    platform_commission = Column(Float, default=0.0)  # Mirrored from booking.commission_amount
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Review(Base):

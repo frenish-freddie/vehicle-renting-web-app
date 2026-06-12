@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from typing import Optional, List, Any
 from datetime import datetime
 
@@ -105,6 +105,10 @@ class VehicleBase(BaseModel):
     pickup_location_id: Optional[int] = None
     delivery_available: bool = False
     delivery_charge: float = 0.0
+    # Phase 3: granular delivery settings
+    host_delivery_available: bool = False
+    delivery_fee_per_km: float = 0.0
+    max_delivery_radius_km: float = 0.0
     price_hourly: Optional[float] = None
     price_daily: float
     price_weekly: Optional[float] = None
@@ -155,19 +159,56 @@ class LocationResponse(LocationBase):
         from_attributes = True
 
 
+# ----------------- DELIVERY OPTIONS RESPONSE (Phase 3) -----------------
+class DeliveryOptionsResponse(BaseModel):
+    host_delivery_available: bool
+    delivery_fee_per_km: float
+    max_delivery_radius_km: float
+    delivery_charge_flat: float  # existing flat delivery_charge
+    host_location: Optional[str] = None  # textual address for self-pickup display
+    host_lat: Optional[float] = None
+    host_lng: Optional[float] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ----------------- DRIVER AVAILABLE SCHEMA (Phase 2) -----------------
+class DriverAvailableItem(BaseModel):
+    id: int
+    name: str
+    hourly_rate: float
+    rating_avg: float
+    experience_years: int
+    languages: str
+    dl_classes: str
+    photo_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 # ----------------- BOOKING SCHEMAS -----------------
 class BookingBase(BaseModel):
     vehicle_id: int
     driver_id: Optional[int] = None
     from_dt: datetime
     to_dt: datetime
-    trip_type: str = "self"
+    trip_type: str = "self_drive"
+    trip_duration_hours: float = 0.0
+    # Phase 3: pickup / delivery
+    pickup_type: str = "self_pickup"   # 'self_pickup' | 'host_delivery' | 'driver_pickup'
     pickup_address: str
     delivery_address: Optional[str] = None
+    delivery_lat: Optional[float] = None
+    delivery_lng: Optional[float] = None
     add_ons: Optional[str] = None
     coupon_code: Optional[str] = None
     base_amount: float
     driver_fee: float = 0.0
+    # Phase 2: hourly driver pricing
+    driver_hourly_rate: float = 0.0
+    driver_total_cost: float = 0.0
     delivery_fee: float = 0.0
     gst_amount: float = 0.0
     deposit_amount: float = 0.0
@@ -177,7 +218,17 @@ class BookingBase(BaseModel):
     business_name: Optional[str] = None
 
 class BookingCreate(BookingBase):
-    pass
+    @model_validator(mode='after')
+    def validate_pickup_and_delivery(self):
+        if self.trip_type == "with_driver":
+            self.pickup_type = "driver_pickup"
+            self.delivery_address = None
+            self.delivery_lat = None
+            self.delivery_lng = None
+        elif self.trip_type == "self_drive" and self.pickup_type == "host_delivery":
+            if not self.delivery_address or self.delivery_lat is None or self.delivery_lng is None:
+                raise ValueError("delivery_address, delivery_lat, and delivery_lng are required when pickup_type is 'host_delivery'")
+        return self
 
 class BookingUpdate(BaseModel):
     status: str
@@ -193,8 +244,53 @@ class BookingResponse(BookingBase):
     created_at: datetime
     vehicle: Optional[VehicleResponse] = None
 
+    # Phase 1: Partial Payment fields
+    partial_amount: float = 0.0
+    remaining_amount: float = 0.0
+    payment_mode: str = "partial"
+    balance_payment_status: str = "pending"
+    balance_paid_at: Optional[datetime] = None
+
+    # Phase 5: Ongoing Trip fields
+    current_status: str = "confirmed"
+    expected_return_at: Optional[datetime] = None
+    actual_return_at: Optional[datetime] = None
+    is_delayed: bool = False
+    delay_minutes: int = 0
+
     class Config:
         from_attributes = True
+
+# ----------------- PHASE 5 SCHEMAS -----------------
+class TripStatusLogResponse(BaseModel):
+    id: int
+    booking_id: int
+    status: str
+    updated_by_role: str
+    updated_by_id: int
+    note: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class TripStatusUpdateRequest(BaseModel):
+    status: str
+    note: Optional[str] = None
+    is_delayed: Optional[bool] = None
+    delay_minutes: Optional[int] = None
+
+class PaymentInfoResponse(BaseModel):
+    partial_amount: float
+    remaining_amount: float
+    balance_payment_status: str
+    trip_duration_hours: float
+    is_delayed: bool
+    delay_minutes: int
+
+    class Config:
+        from_attributes = True
+
 
 
 # ----------------- DRIVER BOOKING SCHEMAS -----------------
@@ -237,6 +333,18 @@ class PaymentResponse(PaymentBase):
     id: int
     status: str
     created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# Phase 1: Payment Summary
+class PaymentSummaryResponse(BaseModel):
+    partial_amount: float
+    remaining_amount: float
+    balance_payment_status: str
+    total_amount: float
+    balance_paid_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

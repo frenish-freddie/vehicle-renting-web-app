@@ -4,6 +4,7 @@ from sqlalchemy import func
 from app.database.connection import get_db
 from app.models import Booking, Vehicle, User, Driver
 from app.auth.jwt import RoleChecker
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/dashboards", tags=["Dashboard Analytics"])
 
@@ -77,18 +78,90 @@ def get_owner_stats(
         Booking.vehicle_id.in_(vehicle_ids)
     ).order_by(Booking.created_at.desc()).limit(5).all()
 
-    for r in recent_requests:
+    # ALL pending requests for approval
+    pending_requests = db.query(Booking).filter(
+        Booking.vehicle_id.in_(vehicle_ids),
+        Booking.status == "pending"
+    ).order_by(Booking.created_at.desc()).all()
+
+    for r in recent_requests + pending_requests:
         r.vehicle = db.query(Vehicle).filter(Vehicle.id == r.vehicle_id).first()
         r.user = db.query(User).filter(User.id == r.user_id).first()
+
+    # Chart Data (Last 7 days revenue)
+    chart_data = []
+    today = datetime.now().date()
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        
+        # We need to sum bookings for this day using sqlite date extraction or just filter by date
+        # For simplicity without db specific funcs, we query all and filter, or use func.date in sqlite
+        daily_rev = db.query(func.sum(Booking.total_amount)).filter(
+            Booking.vehicle_id.in_(vehicle_ids),
+            Booking.status.in_(["confirmed", "ongoing", "completed"]),
+            func.date(Booking.created_at) == day
+        ).scalar() or 0.0
+
+        daily_bookings = db.query(Booking).filter(
+            Booking.vehicle_id.in_(vehicle_ids),
+            func.date(Booking.created_at) == day
+        ).count()
+
+        chart_data.append({
+            "name": day.strftime("%a"),
+            "revenue": float(daily_rev),
+            "bookings": daily_bookings
+        })
+
+    enriched_vehicles = []
+    for v in vehicles:
+        earned = db.query(func.sum(Booking.total_amount)).filter(
+            Booking.vehicle_id == v.id,
+            Booking.status.in_(["confirmed", "ongoing", "completed"])
+        ).scalar() or 0.0
+        
+        trips = db.query(Booking).filter(
+            Booking.vehicle_id == v.id,
+            Booking.status == "completed"
+        ).count()
+        
+        ongoing = db.query(Booking).filter(
+            Booking.vehicle_id == v.id,
+            Booking.status.in_(["confirmed", "ongoing"])
+        ).first()
+        
+        pending = db.query(Booking).filter(
+            Booking.vehicle_id == v.id,
+            Booking.status == "pending"
+        ).first()
+        
+        if ongoing:
+            current_status = "On Rent"
+        elif pending:
+            current_status = "Pending Approval"
+        else:
+            current_status = "Available"
+            
+        enriched_vehicles.append({
+            "id": v.id,
+            "vehicle_name": f"{v.brand} {v.model}" if v.brand else "Vehicle",
+            "registration_number": v.registration_no,
+            "base_price": v.price_daily,
+            "images": v.images,
+            "total_earned": float(earned),
+            "total_trips": trips,
+            "current_status": current_status
+        })
 
     return {
         "total_vehicles": total_vehicles,
         "active_bookings": active_bookings,
         "total_earnings": round(total_earnings, 2),
         "recent_requests": recent_requests,
-        "vehicles": vehicles
+        "pending_requests": pending_requests,
+        "vehicles": enriched_vehicles,
+        "chart_data": chart_data
     }
-
 @router.get("/driver")
 def get_driver_stats(
     current_user: User = Depends(RoleChecker(["driver", "admin"])),
@@ -122,6 +195,9 @@ def get_driver_stats(
         "rating": driver_profile.rating_avg,
         "experience": driver_profile.experience_years,
         "availability": driver_profile.is_approved,
+        "verification_status": driver_profile.verification_status,
+        "is_active": driver_profile.is_active,
+        "license_url": driver_profile.license_url,
         "total_trips": total_trips,
         "earnings": round(driver_earnings, 2),
         "assigned_trips": assigned_trips

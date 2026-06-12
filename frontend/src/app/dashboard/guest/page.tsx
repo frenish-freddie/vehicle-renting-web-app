@@ -3,9 +3,12 @@
 import { useAuthStore } from "@/store/authStore";
 import { CreditCard, CalendarDays, Compass, ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
+import ActiveTripCard from "@/components/trips/ActiveTripCard";
+import { useActiveTrips } from "@/hooks/useActiveTripStatus";
 
 export default function CustomerDashboard() {
   const { dashboardStats, isLoading } = useAuthStore();
+  const { activeTrips, isLoading: activeTripsLoading } = useActiveTrips();
 
   if (isLoading || !dashboardStats) {
     return (
@@ -25,6 +28,14 @@ export default function CustomerDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Phase 5: Active Trip Dashboard Panel */}
+      {!activeTripsLoading && activeTrips.length > 0 && (
+        <div>
+          <h2 className="text-base font-extrabold text-neutral-950 dark:text-white mb-4">My Active Trip</h2>
+          <ActiveTripCard trip={activeTrips[0]} role="user" />
+        </div>
+      )}
+
       {/* Stats Blocks */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Money spent */}

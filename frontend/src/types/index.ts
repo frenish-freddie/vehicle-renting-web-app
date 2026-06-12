@@ -39,9 +39,15 @@ export interface Booking {
   end_date: string;
   driver_included: boolean;
   total_price: number;
+  total_amount?: number;
   booking_status: "pending" | "confirmed" | "active" | "completed" | "cancelled";
   created_at: string;
   vehicle?: Vehicle;
+  // Phase 1: Partial Payment
+  partial_amount?: number;
+  remaining_amount?: number;
+  balance_payment_status?: "pending" | "paid";
+  balance_paid_at?: string | null;
 }
 
 export interface Driver {
@@ -52,6 +58,18 @@ export interface Driver {
   experience_years: number;
   rating: number;
   availability: boolean;
+}
+
+// Phase 2: driver option returned by GET /api/drivers/available
+export interface DriverOption {
+  id: number;
+  name: string;
+  hourly_rate: number;
+  rating_avg: number;
+  experience_years: number;
+  languages: string;
+  dl_classes: string;
+  photo_url?: string | null;
 }
 
 export interface Review {

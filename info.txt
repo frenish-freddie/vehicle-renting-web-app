@@ -218,3 +218,9 @@
                             Review Submitted
 
             
+
+            front end 
+            next.js(navigation,server side)
+            react 
+            type script 
+            tailwind 

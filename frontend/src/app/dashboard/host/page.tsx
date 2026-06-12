@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/services/api";
-import { Sparkles, Landmark, CalendarRange, Plus, ShieldCheck, Settings, Loader2, ArrowRight } from "lucide-react";
+import { Sparkles, Landmark, CalendarRange, Plus, CheckCircle2, XCircle, Clock, Loader2, ArrowRight } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import ActiveTripCard from "@/components/trips/ActiveTripCard";
+import { useActiveTrips } from "@/hooks/useActiveTripStatus";
 
 export default function OwnerDashboard() {
   const { dashboardStats, isLoading, fetchDashboardStats } = useAuthStore();
+  const { activeTrips, isLoading: activeTripsLoading, refetch } = useActiveTrips();
   
   // Form toggles
   const [showAddForm, setShowAddForm] = useState(false);
@@ -76,8 +80,8 @@ export default function OwnerDashboard() {
       });
       alert(`Trip status updated to ${status}.`);
       await fetchDashboardStats();
-    } catch (error) {
-      alert("Failed to update booking status.");
+    } catch (error: any) {
+      alert(error.response?.data?.detail || "Failed to update booking status.");
     }
   };
 
@@ -90,55 +94,25 @@ export default function OwnerDashboard() {
     );
   }
 
-  const { total_vehicles, active_bookings, total_earnings, recent_requests = [], vehicles = [] } = dashboardStats;
+  const { total_vehicles, active_bookings, total_earnings, vehicles = [], chart_data = [], pending_requests = [] } = dashboardStats;
+
+  // Render chart tooltip nicely
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-neutral-200 rounded-xl shadow-lg dark:bg-neutral-800 dark:border-neutral-700">
+          <p className="text-xs font-bold text-neutral-500 mb-1">{label}</p>
+          <p className="text-sm font-extrabold text-primary-600">₹{payload[0].value}</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="space-y-6">
-      {/* Overview Analytics row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Earnings */}
-        <div className="bg-white border border-neutral-200/50 p-5 rounded-2xl shadow-sm flex items-center gap-4 dark:bg-neutral-900 dark:border-neutral-800">
-          <div className="h-10 w-10 rounded-xl bg-primary-100 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 flex items-center justify-center">
-            <Landmark className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="block text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">Total Revenue</span>
-            <span className="text-xl font-extrabold text-neutral-950 dark:text-white mt-0.5 block">
-              ₹{total_earnings}
-            </span>
-          </div>
-        </div>
-
-        {/* Fleet size */}
-        <div className="bg-white border border-neutral-200/50 p-5 rounded-2xl shadow-sm flex items-center gap-4 dark:bg-neutral-900 dark:border-neutral-800">
-          <div className="h-10 w-10 rounded-xl bg-primary-100 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 flex items-center justify-center">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <span className="block text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">My Fleet</span>
-            <span className="text-xl font-extrabold text-neutral-950 dark:text-white mt-0.5 block">
-              {total_vehicles} Vehicles
-            </span>
-          </div>
-        </div>
-
-        {/* Active Reservations */}
-        <div className="bg-white border border-neutral-200/50 p-5 rounded-2xl shadow-sm flex items-center gap-4 dark:bg-neutral-900 dark:border-neutral-800">
-          <div className="h-10 w-10 rounded-xl bg-primary-100 dark:bg-primary-950/40 text-primary-600 dark:text-primary-400 flex items-center justify-center">
-            <CalendarRange className="h-5 w-5 animate-pulse" />
-          </div>
-          <div>
-            <span className="block text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">Active Bookings</span>
-            <span className="text-xl font-extrabold text-neutral-950 dark:text-white mt-0.5 block">
-              {active_bookings} Reserv.
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Primary Actions panel */}
       <div className="flex justify-between items-center gap-4">
-        <h2 className="text-base font-extrabold text-neutral-900 dark:text-white">Active Fleet & Listings</h2>
+        <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white">Host Dashboard</h2>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
           className="bg-primary-500 hover:bg-primary-600 text-white font-semibold text-xs px-4 h-9 rounded-lg flex items-center gap-1 shadow-sm transition"
@@ -148,9 +122,8 @@ export default function OwnerDashboard() {
         </button>
       </div>
 
-      {/* Add Vehicle Form overlay */}
       {showAddForm && (
-        <div className="bg-white border border-neutral-200/50 rounded-3xl p-6 shadow-md dark:bg-neutral-900 dark:border-neutral-800">
+        <div className="bg-white border border-neutral-200/50 rounded-3xl p-6 shadow-sm dark:bg-neutral-900 dark:border-neutral-800">
           <h3 className="text-sm font-bold text-neutral-900 dark:text-white mb-4">List a New Vehicle</h3>
           <form onSubmit={handleAddVehicle} className="space-y-4 text-xs">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -317,7 +290,6 @@ export default function OwnerDashboard() {
               />
             </div>
 
-            {/* Form actions */}
             <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
@@ -331,89 +303,236 @@ export default function OwnerDashboard() {
                 disabled={isSubmitting}
                 className="bg-primary-500 text-white px-4 h-9 rounded-lg font-semibold flex items-center justify-center gap-1.5 shadow"
               >
-                {isSubmitting ? (
-                  <Loader2 className="h-4 animate-spin" />
-                ) : (
-                  <span>Submit Listing</span>
-                )}
+                {isSubmitting ? <Loader2 className="h-4 animate-spin" /> : <span>Submit Listing</span>}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Fleet List */}
-        <div className="lg:col-span-2 bg-white border border-neutral-200/50 rounded-3xl p-6 shadow-sm dark:bg-neutral-900 dark:border-neutral-800/80">
-          <h3 className="font-bold text-neutral-900 dark:text-white text-sm mb-4">My Fleet Listings</h3>
-          {vehicles.length === 0 ? (
-            <p className="text-xs text-neutral-400 py-6 text-center">No vehicles listed under this account.</p>
-          ) : (
-            <div className="divide-y divide-neutral-100 dark:divide-neutral-850">
-              {vehicles.map((v: any) => (
-                <div key={v.id} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between text-xs gap-4">
-                  <div>
-                    <h4 className="font-bold text-neutral-850 dark:text-white capitalize">{v.vehicle_name}</h4>
-                    <p className="text-neutral-400 mt-0.5">{v.registration_number} • {v.location}</p>
+      {/* Grid Layout conforming to Reference Layout (4 Quadrants) */}
+      <div className="flex flex-col gap-6">
+        
+        {/* Phase 5: Ongoing Host Trips Panel */}
+        {!activeTripsLoading && activeTrips.length > 0 && (
+          <div className="bg-white border border-neutral-200/50 rounded-3xl p-6 shadow-sm dark:bg-neutral-900 dark:border-neutral-800">
+            <h3 className="font-bold text-neutral-500 text-xs tracking-wider uppercase mb-6">Active Bookings</h3>
+            {activeTrips.map(trip => (
+              <ActiveTripCard key={trip.id} trip={trip} role="host" onRefresh={refetch} />
+            ))}
+          </div>
+        )}
+
+        {/* TOP ROW */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Top-Left: Host Analytics Card */}
+          <div className="bg-white border border-neutral-200/50 rounded-3xl p-6 shadow-sm dark:bg-neutral-900 dark:border-neutral-800 flex flex-col justify-between">
+            <div>
+              <h3 className="font-bold text-neutral-500 text-xs tracking-wider uppercase mb-6">Host Analytics</h3>
+              
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 text-primary-600 flex items-center justify-center">
+                      <Landmark className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-neutral-400">Total Revenue</p>
+                      <p className="text-2xl font-black text-neutral-900 dark:text-white">₹{total_earnings}</p>
+                    </div>
                   </div>
-                  <span className="font-extrabold text-neutral-800 dark:text-neutral-300">₹{v.base_price} base</span>
                 </div>
-              ))}
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-neutral-400">Completed Bookings</p>
+                      <p className="text-2xl font-black text-neutral-900 dark:text-white">
+                        {vehicles.reduce((acc: number, v: any) => acc + (v.total_trips || 0), 0)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-neutral-400">Active Vehicles</p>
+                      <p className="text-2xl font-black text-neutral-900 dark:text-white">{total_vehicles}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Top-Right: Host's Uploaded Vehicles */}
+          <div className="bg-white border border-neutral-200/50 rounded-3xl p-6 shadow-sm dark:bg-neutral-900 dark:border-neutral-800">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-neutral-500 text-xs tracking-wider uppercase">My Vehicles</h3>
+              <span className="text-xs font-bold text-primary-500 cursor-pointer">View All</span>
+            </div>
+            
+            {vehicles.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-48 text-neutral-400">
+                <Sparkles className="h-8 w-8 mb-2 opacity-50" />
+                <p className="text-xs font-bold">No vehicles uploaded yet</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 h-[250px] overflow-y-auto pr-1">
+                {vehicles.map((v: any) => (
+                  <div key={v.id} className="relative group bg-neutral-50 dark:bg-neutral-800 rounded-2xl overflow-hidden border border-neutral-100 dark:border-neutral-700 flex flex-col">
+                    <div className="h-24 w-full bg-neutral-200 dark:bg-neutral-700 relative shrink-0">
+                      {v.images ? (
+                        <img src={v.images.split(',')[0]} alt={v.vehicle_name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-neutral-400">
+                          <Sparkles className="h-5 w-5" />
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2">
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shadow-sm ${
+                          v.current_status === "On Rent" ? "bg-blue-500/90 text-white border-blue-600/50" :
+                          v.current_status === "Pending Approval" ? "bg-amber-500/90 text-white border-amber-600/50" :
+                          "bg-emerald-500/90 text-white border-emerald-600/50"
+                        }`}>
+                          {v.current_status}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-3 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h4 className="font-bold text-neutral-900 dark:text-white text-xs truncate">{v.vehicle_name}</h4>
+                        <p className="text-[10px] text-neutral-400 mt-0.5">{v.registration_number}</p>
+                      </div>
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="font-extrabold text-primary-600 text-xs truncate mr-1">₹{v.total_earned} <span className="text-[9px] text-neutral-400 font-normal">earned</span></span>
+                        <span className="text-[10px] bg-white dark:bg-neutral-900 px-1.5 py-0.5 rounded text-neutral-500 border border-neutral-200 dark:border-neutral-700 font-semibold flex items-center gap-1 shrink-0">
+                          <CheckCircle2 className="h-3 w-3 text-green-500" />
+                          {v.total_trips} Trips
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
         </div>
 
-        {/* Right Column: Bookings requests */}
-        <div className="bg-white border border-neutral-200/50 rounded-3xl p-6 shadow-sm dark:bg-neutral-900 dark:border-neutral-800/80">
-          <h3 className="font-bold text-neutral-900 dark:text-white text-sm mb-4">Customer Requests</h3>
-          {recent_requests.length === 0 ? (
-            <p className="text-xs text-neutral-400 py-6 text-center">No reservations found on your fleet.</p>
-          ) : (
-            <div className="space-y-4">
-              {recent_requests.map((req: any) => (
-                <div key={req.id} className="p-3 border border-neutral-100 rounded-2xl dark:border-neutral-800 text-[11px] space-y-2">
-                  <div className="flex justify-between font-bold">
-                    <span className="text-neutral-850 dark:text-white">{req.vehicle?.vehicle_name}</span>
-                    <span className="text-primary-600">₹{req.total_amount}</span>
-                  </div>
-                  <div className="text-neutral-400">
-                    <p>Client: {req.user?.name}</p>
-                    <p className="mt-0.5 truncate">Route: {req.pickup_address?.split(",")[0] || "Pickup"} → {req.delivery_address?.split(",")[0] || "Delivery"}</p>
-                  </div>
+        {/* BOTTOM ROW */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Bottom-Left: Line Chart (Revenue Over Time) */}
+          <div className="bg-white border border-neutral-200/50 rounded-3xl p-6 shadow-sm dark:bg-neutral-900 dark:border-neutral-800">
+            <h3 className="font-bold text-neutral-500 text-xs tracking-wider uppercase mb-6">Revenue Over Time (7 Days)</h3>
+            <div className="h-[250px] w-full">
+              {chart_data && chart_data.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chart_data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey="name" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 700 }} 
+                      dy={10}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{ fontSize: 10, fill: '#9ca3af', fontWeight: 700 }}
+                      tickFormatter={(value) => `₹${value}`}
+                    />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#f3f4f6', strokeWidth: 2 }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="#4f46e5" 
+                      strokeWidth={3}
+                      dot={{ r: 4, fill: '#4f46e5', strokeWidth: 0 }}
+                      activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-xs font-bold text-neutral-400">No chart data available</p>
+                </div>
+              )}
+            </div>
+          </div>
 
-                  {req.status === "confirmed" && (
-                    <div className="flex gap-2 pt-2">
+          {/* Bottom-Right: Pending Booking Requests */}
+          <div className="bg-white border border-neutral-200/50 rounded-3xl p-6 shadow-sm dark:bg-neutral-900 dark:border-neutral-800 flex flex-col">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-neutral-500 text-xs tracking-wider uppercase">Pending Booking Requests</h3>
+              <span className="bg-orange-100 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {pending_requests.length} New
+              </span>
+            </div>
+            
+            {pending_requests.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-neutral-400">
+                <CheckCircle2 className="h-8 w-8 mb-2 opacity-50" />
+                <p className="text-xs font-bold">You're all caught up!</p>
+                <p className="text-[10px]">No pending requests right now.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 overflow-y-auto flex-1 pr-1 max-h-[250px]">
+                {pending_requests.map((req: any) => (
+                  <div key={req.id} className="p-4 border border-neutral-100 dark:border-neutral-800 rounded-2xl bg-neutral-50/50 dark:bg-neutral-800/50 transition hover:bg-neutral-50 dark:hover:bg-neutral-800">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-bold text-neutral-900 dark:text-white text-sm">{req.user?.name || "Guest"}</h4>
+                        <p className="text-[11px] font-semibold text-primary-600">{req.vehicle?.vehicle_name}</p>
+                      </div>
+                      <span className="font-extrabold text-neutral-900 dark:text-white">₹{req.total_amount}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 mb-4 text-[10px] font-bold text-neutral-500">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>
+                          {new Date(req.from_dt).toLocaleDateString("en-GB", { day: 'numeric', month: 'short' })} - {new Date(req.to_dt).toLocaleDateString("en-GB", { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <ArrowRight className="h-3 w-3" />
+                        <span className="truncate max-w-[100px]">
+                          {req.pickup_address?.split(',')[0]}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => handleUpdateBookingStatus(req.id, "ongoing")}
-                        className="w-1/2 bg-primary-500 hover:bg-primary-600 text-white font-semibold py-1.5 rounded-lg shadow-sm"
+                        onClick={() => handleUpdateBookingStatus(req.id, "confirmed")}
+                        className="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-bold py-2 rounded-xl text-xs transition shadow-sm"
                       >
-                        Start Trip
+                        Approve
                       </button>
                       <button
                         onClick={() => handleUpdateBookingStatus(req.id, "cancelled")}
-                        className="w-1/2 border border-neutral-200 hover:bg-neutral-50 py-1.5 rounded-lg"
+                        className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 font-bold py-2 rounded-xl text-xs transition"
                       >
-                        Decline
+                        Reject
                       </button>
                     </div>
-                  )}
-                  {req.status === "ongoing" && (
-                    <button
-                      onClick={() => handleUpdateBookingStatus(req.id, "completed")}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-1.5 rounded-lg mt-2"
-                    >
-                      Complete Ride
-                    </button>
-                  )}
-                  {req.status !== "confirmed" && req.status !== "ongoing" && (
-                    <span className="block text-[10px] text-neutral-400 uppercase tracking-wider font-bold capitalize mt-1">
-                      Status: {req.status}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
         </div>
       </div>
     </div>

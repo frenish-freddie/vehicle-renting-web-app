@@ -39,7 +39,7 @@ export default function Navbar() {
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">
-              Flexi<span className="text-primary-500">Ride</span>
+              Flexi<span className="text-primary-500 dark:text-blue-500">Ride</span>
             </span>
           </Link>
 
@@ -91,7 +91,7 @@ export default function Navbar() {
           {user ? (
             <div className="flex items-center gap-4">
               <div className="hidden sm:flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-primary-100 dark:bg-primary-950 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-sm">
+                <div className="h-8 w-8 rounded-full bg-primary-100 dark:bg-neutral-800 flex items-center justify-center text-primary-600 dark:text-blue-400 font-bold text-sm">
                   {user.name.charAt(0)}
                 </div>
                 <div className="text-left text-xs">
@@ -121,7 +121,7 @@ export default function Navbar() {
               </Link>
               <Link
                 href="/register"
-                className="text-sm font-semibold bg-primary-500 text-white hover:bg-primary-600 px-4 py-2 rounded-lg shadow-sm transition"
+                className="text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-lg shadow-sm transition dark:bg-blue-600 dark:hover:bg-blue-500"
               >
                 Sign Up
               </Link>

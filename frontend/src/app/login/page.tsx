@@ -40,7 +40,10 @@ export default function Login() {
         setIsGoogleLoading(false);
         setShowGoogleModal(false);
         if (decodedUser) {
-          router.replace(`/dashboard/${decodedUser.role}`);
+          const dest = decodedUser.role === "admin"
+            ? "/admin-dashboard"
+            : `/dashboard/${decodedUser.role}`;
+          router.replace(dest);
         } else {
           router.replace("/");
         }
@@ -72,7 +75,10 @@ export default function Login() {
       // Dynamic Redirect based on decoded role
       const decodedUser = useAuthStore.getState().user;
       if (decodedUser) {
-        router.replace(`/dashboard/${decodedUser.role}`);
+        const dest = decodedUser.role === "admin"
+          ? "/admin-dashboard"
+          : `/dashboard/${decodedUser.role}`;
+        router.replace(dest);
       } else {
         router.replace("/");
       }
@@ -100,7 +106,7 @@ export default function Login() {
       {/* Login Card */}
       <div className="w-full max-w-md bg-white border border-neutral-200/50 rounded-3xl p-8 shadow-2xl relative z-10 dark:bg-neutral-900 dark:border-neutral-800/80">
         <div className="text-center flex flex-col items-center">
-          <div className="h-12 w-12 rounded-2xl bg-primary-500 flex items-center justify-center text-white shadow-lg shadow-primary-500/20 mb-4">
+          <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20 mb-4">
             <Sparkles className="h-6 w-6" />
           </div>
           <h2 className="text-2xl font-extrabold text-neutral-950 dark:text-white">
@@ -134,7 +140,7 @@ export default function Login() {
                 placeholder="jane@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-transparent border-none outline-none text-sm text-neutral-800 focus:ring-0 dark:text-white"
+                className="w-full bg-transparent border-none outline-none text-sm text-neutral-800 focus:ring-0 dark:text-white dark:placeholder:text-neutral-500"
               />
             </div>
           </div>
@@ -157,16 +163,35 @@ export default function Login() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-transparent border-none outline-none text-sm text-neutral-800 focus:ring-0 dark:text-white"
+                className="w-full bg-transparent border-none outline-none text-sm text-neutral-800 focus:ring-0 dark:text-white dark:placeholder:text-neutral-500"
               />
             </div>
+          </div>
+
+          {/* Quick Login Buttons */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-[10px] font-bold text-neutral-400">Quick Fill:</span>
+            {[
+              { role: "Admin", email: "admin@flexiride.com", pass: "admin123" },
+              { role: "Host", email: "host@flexiride.com", pass: "host123" },
+              { role: "Driver", email: "driver@flexiride.com", pass: "driver123" },
+            ].map((u) => (
+              <button 
+                key={u.role} 
+                type="button" 
+                onClick={() => { setEmail(u.email); setPassword(u.pass); }}
+                className="text-[10px] bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 px-2.5 py-1 rounded-md transition font-semibold"
+              >
+                {u.role}
+              </button>
+            ))}
           </div>
 
           {/* Submit */}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-primary-500 hover:bg-primary-600 text-white font-semibold h-11 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-primary-500/10 hover:shadow-primary-500/20 active:scale-[0.99] disabled:opacity-50 transition"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold h-11 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 active:scale-[0.99] disabled:opacity-50 transition dark:bg-blue-600 dark:hover:bg-blue-500 dark:shadow-blue-500/10"
           >
             {isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -188,7 +213,7 @@ export default function Login() {
         <button
           type="button"
           onClick={() => setShowGoogleModal(true)}
-          className="mt-6 w-full h-11 bg-white border border-neutral-200/50 hover:bg-neutral-50 text-neutral-700 font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm transition dark:bg-neutral-850 dark:border-neutral-700/80 dark:hover:bg-neutral-800 dark:text-neutral-200"
+          className="mt-6 w-full h-11 bg-white border border-neutral-200/50 hover:bg-neutral-50 text-neutral-700 font-semibold rounded-xl flex items-center justify-center gap-2 shadow-sm transition dark:bg-neutral-800 dark:border-neutral-700/80 dark:hover:bg-neutral-700 dark:text-neutral-200"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />

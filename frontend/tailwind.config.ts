@@ -93,7 +93,7 @@ const config: Config = {
           "100%": { transform: "translateX(-50%)" },
         }
       },
-    },
+    },  
   },
   plugins: [],
 };

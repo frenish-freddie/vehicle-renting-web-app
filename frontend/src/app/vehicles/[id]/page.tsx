@@ -102,7 +102,7 @@ export default function VehicleDetails() {
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) {
-      router.push("/login");
+      router.push("/login?redirect=true");
       return;
     }
     if (!startDate || !endDate) {
@@ -110,25 +110,15 @@ export default function VehicleDetails() {
       return;
     }
 
-    try {
-      setError(null);
-      const response = await api.post("/api/bookings", {
-        vehicle_id: Number(id),
-        pickup_location: pickup,
-        drop_location: drop,
-        estimated_distance: distance,
-        start_date: new Date(startDate).toISOString(),
-        end_date: new Date(endDate).toISOString(),
-        driver_included: driverIncluded
-      });
-
-      // Save generated booking ID and launch Razorpay checkout modal
-      setBookingId(response.data.id);
-      setTransactionId(`PAY-${Math.floor(100000 + Math.random() * 900000)}`);
-      setShowPaymentModal(true);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || "Booking failed. The vehicle may be booked for those dates.");
-    }
+    const params = new URLSearchParams({
+      start: startDate,
+      end: endDate,
+      pickup: pickup,
+      drop: drop,
+      driver: driverIncluded ? "true" : "false"
+    });
+    
+    router.push(`/booking/${id}?${params.toString()}`);
   };
 
   const confirmPayment = async () => {

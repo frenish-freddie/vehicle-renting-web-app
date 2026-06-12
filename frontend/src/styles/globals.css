@@ -44,8 +44,7 @@ html {
 }
 
 body {
-  background-color: #F8F9FC;
-  color: #0F1923;
+  @apply bg-surface text-text-primary dark:bg-neutral-950 dark:text-neutral-50;
   font-family: var(--font-dm-sans);
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;

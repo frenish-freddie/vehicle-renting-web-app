@@ -2,11 +2,15 @@
 
 import { useState } from "react";
 import { useAuthStore } from "@/store/authStore";
-import { LayoutDashboard, Car, Landmark, Clock, Settings, Search, Bell, User as UserIcon, TrendingUp, ArrowRight, LogOut, CheckCircle2 } from "lucide-react";
+import api from "@/services/api";
+import { LayoutDashboard, Car, Landmark, Clock, Settings, Search, Bell, User as UserIcon, TrendingUp, ArrowRight, LogOut, CheckCircle2, UploadCloud, AlertCircle, Loader2 } from "lucide-react";
+import ActiveTripCard from "@/components/trips/ActiveTripCard";
+import { useActiveTrips } from "@/hooks/useActiveTripStatus";
 
 export default function DriverDashboard() {
   const { user, dashboardStats, isLoading, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState("Dashboard");
+  const { activeTrips, isLoading: activeTripsLoading, refetch } = useActiveTrips();
 
   if (isLoading || !dashboardStats || !user) {
     return (
@@ -16,7 +20,7 @@ export default function DriverDashboard() {
     );
   }
 
-  const { rating, total_trips, earnings, assigned_trips } = dashboardStats;
+  const { rating, total_trips, earnings, assigned_trips, verification_status } = dashboardStats;
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#F8F9FC] flex overflow-hidden text-[#0F1923] font-sans">
@@ -94,8 +98,19 @@ export default function DriverDashboard() {
 
         {/* Scrollable Area */}
         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          {verification_status !== "approved" ? (
+            <DriverVerificationBanner status={verification_status || "unsubmitted"} />
+          ) : (
           <div className="max-w-6xl mx-auto space-y-8">
              
+             {/* Phase 5: Ongoing Driver Trip Panel */}
+             {!activeTripsLoading && activeTrips.length > 0 && (
+               <div>
+                 <h2 className="text-base font-extrabold text-neutral-950 uppercase tracking-wider mb-4">My Current Trip</h2>
+                 <ActiveTripCard trip={activeTrips[0]} role="driver" onRefresh={refetch} />
+               </div>
+             )}
+
              {/* Stats Row */}
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                <StatCard 
@@ -251,7 +266,8 @@ export default function DriverDashboard() {
 
              </div>
 
-          </div>
+             </div>
+          )}
         </div>
       </main>
       <style dangerouslySetInnerHTML={{__html: `
@@ -297,6 +313,114 @@ function StatCard({ title, value, trend, color, accent }: { title: string, value
           </defs>
         </svg>
       </div>
+    </div>
+  );
+}
+
+function DriverVerificationBanner({ status }: { status: string }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setUploading(true);
+    setError("");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await api.post("/api/drivers/upload-license", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (res.status !== 200 && res.status !== 201) {
+        throw new Error(res.data?.detail || "Upload failed");
+      }
+
+      window.location.reload();
+    } catch (err: any) {
+      setError(err.message);
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto mt-12 bg-white border border-neutral-200 rounded-3xl p-8 shadow-sm text-center relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-1.5 bg-accent-amber"></div>
+      
+      {status === "pending" ? (
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6">
+            <Clock className="w-10 h-10 text-accent-amber" />
+          </div>
+          <h2 className="text-2xl font-bold text-primary-dark mb-2">Under Review</h2>
+          <p className="text-neutral-500 mb-6">Your driving license has been submitted and is currently being verified by our team. This usually takes 24-48 hours. You will be notified once approved.</p>
+          <button disabled className="bg-neutral-100 text-neutral-400 font-bold py-3 px-8 rounded-xl flex items-center gap-2 cursor-not-allowed">
+            <Loader2 className="w-5 h-5 animate-spin" /> Verifying...
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-4">
+          <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
+            <UploadCloud className="w-10 h-10 text-blue-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-primary-dark mb-2">
+            {status === "rejected" ? "Verification Rejected" : "Verify Your Driving License"}
+          </h2>
+          <p className="text-neutral-500 mb-8">
+            {status === "rejected" 
+              ? "Your previous license submission was rejected. Please upload a clear, valid driving license to start accepting trips." 
+              : "Before you can start accepting trips, we need to verify your driving license. Please upload a clear photo or PDF."}
+          </p>
+
+          {error && (
+            <div className="w-full bg-red-50 text-red-500 p-4 rounded-xl flex items-center justify-center gap-2 mb-6 font-semibold text-sm">
+              <AlertCircle className="w-4 h-4" /> {error}
+            </div>
+          )}
+
+          <div className="w-full relative">
+            <input 
+              type="file" 
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              disabled={uploading}
+            />
+            <div className={`w-full border-2 border-dashed rounded-2xl p-8 transition-colors ${file ? 'border-primary-dark bg-neutral-50' : 'border-neutral-300 hover:border-primary-dark hover:bg-neutral-50'}`}>
+              {file ? (
+                <div className="flex flex-col items-center">
+                  <CheckCircle2 className="w-8 h-8 text-accent-green mb-2" />
+                  <span className="font-bold text-primary-dark">{file.name}</span>
+                  <span className="text-xs text-neutral-400 mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <UploadCloud className="w-8 h-8 text-neutral-400 mb-2" />
+                  <span className="font-bold text-primary-dark">Click or drag file to upload</span>
+                  <span className="text-xs text-neutral-400 mt-1">JPEG, PNG, WEBP, or PDF (Max 5MB)</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button 
+            onClick={handleUpload}
+            disabled={!file || uploading}
+            className={`mt-6 w-full font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all ${!file || uploading ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed' : 'bg-primary-dark text-white hover:bg-black shadow-lg hover:-translate-y-0.5'}`}
+          >
+            {uploading ? (
+              <><Loader2 className="w-5 h-5 animate-spin" /> Uploading...</>
+            ) : (
+              <>Submit for Verification <ArrowRight className="w-5 h-5" /></>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
