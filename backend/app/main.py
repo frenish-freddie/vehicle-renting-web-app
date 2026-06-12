@@ -24,7 +24,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 # CORS Policy configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permits Next.js dev server connections
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Permits Next.js dev server connections
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
