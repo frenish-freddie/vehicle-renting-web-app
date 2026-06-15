@@ -6,11 +6,13 @@ import api from "@/services/api";
 import { Vehicle } from "@/types";
 import VehicleCard from "@/components/VehicleCard";
 import HeroNavbar from "@/components/HeroNavbar";
+import { useAuthStore } from "@/store/authStore";
 import { Search, Loader2, Info, MapPin, Calendar, Filter } from "lucide-react";
 
 function VehiclesBrowseContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuthStore();
   
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -161,7 +163,11 @@ function VehiclesBrowseContent() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {vehicles.map((vehicle) => (
-              <VehicleCard key={vehicle.id} vehicle={vehicle} />
+              <VehicleCard
+                key={vehicle.id}
+                vehicle={vehicle}
+                isOwnVehicle={!!user && user.role === "host" && vehicle.owner_id === user.id}
+              />
             ))}
           </div>
         )}

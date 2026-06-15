@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import ConditionalNavbar from "@/components/ConditionalNavbar";
 import ConditionalShell from "@/components/ConditionalShell";
-import NavigationLoader from "@/components/NavigationLoader";
 
 export const metadata: Metadata = {
   title: "FlexiRide — Universal Vehicle Rentals",
@@ -27,11 +26,6 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-screen flex-col font-sans antialiased bg-surface text-text-primary">
-        {/* Global sleek animated loader transition interceptor wrapped in Suspense to preserve static build */}
-        <Suspense fallback={null}>
-          <NavigationLoader />
-        </Suspense>
-
         {/* Conditionally show default Navbar (hidden on / and /admin-dashboard) */}
         <ConditionalNavbar />
 

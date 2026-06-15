@@ -123,6 +123,49 @@ def list_all_users(
                 "is_host_approved": u.is_host_approved,
                 "dl_verified": u.dl_verified,
                 "aadhaar_verified": u.aadhaar_verified,
+                "user_dl_url": u.user_dl_url,
+                "user_aadhaar_url": u.user_aadhaar_url,
+                "user_kyc_status": u.user_kyc_status,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+            }
+            for u in users
+        ]
+    }
+
+
+@router.get("/user-kyc")
+def list_user_kyc(
+    page: int = 1,
+    limit: int = 20,
+    status: Optional[str] = None,
+    current_user: User = Depends(RoleChecker(["admin"])),
+    db: Session = Depends(get_db)
+):
+    query = db.query(User).filter(User.role == "guest")
+    if status:
+        query = query.filter(User.user_kyc_status == status)
+    else:
+        # If no status filter, only show users who have uploaded documents (status != unsubmitted)
+        query = query.filter(User.user_kyc_status != "unsubmitted")
+
+    total = query.count()
+    users = query.order_by(User.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "users": [
+            {
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "phone": u.phone,
+                "user_dl_url": u.user_dl_url,
+                "user_aadhaar_url": u.user_aadhaar_url,
+                "user_kyc_status": u.user_kyc_status,
+                "dl_verified": u.dl_verified,
+                "aadhaar_verified": u.aadhaar_verified,
                 "created_at": u.created_at.isoformat() if u.created_at else None,
             }
             for u in users
@@ -155,7 +198,40 @@ def reject_host(
         raise HTTPException(status_code=404, detail="User not found")
     user.is_host_approved = False
     db.commit()
-    return {"message": f"User {user.name} suspended.", "is_host_approved": False}
+    return {"message": f"User {user.name} rejected as host.", "is_host_approved": False}
+
+
+@router.patch("/users/{user_id}/approve-kyc")
+def approve_user_kyc(
+    user_id: int,
+    current_user: User = Depends(RoleChecker(["admin"])),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.user_kyc_status = "approved"
+    user.dl_verified = bool(user.user_dl_url)
+    user.aadhaar_verified = bool(user.user_aadhaar_url)
+    db.commit()
+    return {"message": f"KYC for {user.name} approved.", "user_kyc_status": "approved"}
+
+
+@router.patch("/users/{user_id}/reject-kyc")
+def reject_user_kyc(
+    user_id: int,
+    current_user: User = Depends(RoleChecker(["admin"])),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.user_kyc_status = "rejected"
+    user.dl_verified = False
+    user.aadhaar_verified = False
+    db.commit()
+    return {"message": f"KYC for {user.name} rejected.", "user_kyc_status": "rejected"}
+
 
 @router.delete("/users/{user_id}")
 def delete_user(
@@ -208,6 +284,9 @@ def list_all_vehicles(
             "price_daily": v.price_daily,
             "is_approved": v.is_approved,
             "is_available": v.is_available,
+            "images": v.images,
+            "rc_url": v.rc_url,
+            "insurance_url": v.insurance_url,
             "host_name": host.name if host else "Unknown",
             "host_email": host.email if host else "",
             "created_at": v.created_at.isoformat() if v.created_at else None,
@@ -397,3 +476,72 @@ def get_platform_history(
         })
 
     return {"total": total, "page": page, "limit": limit, "transactions": result}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HOST KYC — list & approve/reject host KYC documents
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get("/host-kyc")
+def list_host_kyc(
+    page: int = 1,
+    limit: int = 20,
+    kyc_status: Optional[str] = None,
+    current_user: User = Depends(RoleChecker(["admin"])),
+    db: Session = Depends(get_db)
+):
+    """List all host users with their KYC document status."""
+    query = db.query(User).filter(User.role == RoleEnum.host)
+    if kyc_status:
+        query = query.filter(User.host_kyc_status == kyc_status)
+    total = query.count()
+    users = query.order_by(User.created_at.desc()).offset((page - 1) * limit).limit(limit).all()
+    return {
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "hosts": [
+            {
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "phone": u.phone,
+                "host_kyc_status": u.host_kyc_status or "unsubmitted",
+                "host_aadhaar_url": u.host_aadhaar_url,
+                "host_pan_url": u.host_pan_url,
+                "is_host_approved": u.is_host_approved,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+            }
+            for u in users
+        ],
+    }
+
+
+@router.patch("/users/{user_id}/approve-kyc")
+def approve_host_kyc(
+    user_id: int,
+    current_user: User = Depends(RoleChecker(["admin"])),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.host_kyc_status = "approved"
+    user.is_host_approved = True
+    db.commit()
+    return {"message": f"Host {user.name} KYC approved.", "host_kyc_status": "approved"}
+
+
+@router.patch("/users/{user_id}/reject-kyc")
+def reject_host_kyc(
+    user_id: int,
+    current_user: User = Depends(RoleChecker(["admin"])),
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.host_kyc_status = "rejected"
+    user.is_host_approved = False
+    db.commit()
+    return {"message": f"Host {user.name} KYC rejected.", "host_kyc_status": "rejected"}

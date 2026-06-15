@@ -13,7 +13,11 @@ import {
   ChevronRight,
   Shield,
   Trash2,
+  FileImage,
+  ExternalLink
 } from "lucide-react";
+
+const API_BASE = "http://localhost:8000";
 
 const ROLE_COLORS: Record<string, string> = {
   admin:  "bg-amber-400/10 text-amber-400 border-amber-400/20",
@@ -32,6 +36,7 @@ export default function AdminUsers() {
   const [actionId, setActionId] = useState<number | null>(null);
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const LIMIT = 15;
 
   const fetchUsers = useCallback(() => {
@@ -62,6 +67,30 @@ export default function AdminUsers() {
       );
     } catch {
       setError("Action failed. Please try again.");
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const handleKycApproval = async (userId: number, approve: boolean) => {
+    setActionId(userId);
+    try {
+      if (approve) await adminApi.approveUserKyc(userId);
+      else await adminApi.rejectUserKyc(userId);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId
+            ? {
+                ...u,
+                user_kyc_status: approve ? "approved" : "rejected",
+                dl_verified: approve ? !!u.user_dl_url : false,
+                aadhaar_verified: approve ? !!u.user_aadhaar_url : false,
+              }
+            : u
+        )
+      );
+    } catch {
+      setError("KYC action failed.");
     } finally {
       setActionId(null);
     }
@@ -118,6 +147,29 @@ export default function AdminUsers() {
                 Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Preview Modal */}
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <div className="max-w-2xl w-full bg-slate-900 border border-white/10 rounded-2xl p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-sm font-bold text-white">Document Preview</p>
+              <button onClick={() => setPreviewUrl(null)} className="text-slate-400 hover:text-white transition text-xl leading-none">&times;</button>
+            </div>
+            {previewUrl.endsWith(".pdf") ? (
+              <iframe src={previewUrl} className="w-full h-[500px] rounded-xl" />
+            ) : (
+              <img src={previewUrl} alt="doc" className="w-full max-h-[500px] object-contain rounded-xl" />
+            )}
+            <a href={previewUrl} target="_blank" rel="noreferrer" className="mt-3 flex items-center gap-2 text-xs text-blue-400 hover:underline">
+              <ExternalLink className="h-3.5 w-3.5" /> Open in new tab
+            </a>
           </div>
         </div>
       )}
@@ -244,25 +296,60 @@ export default function AdminUsers() {
 
                     {/* KYC */}
                     <td className="px-4 py-4 hidden md:table-cell">
-                      <div className="flex gap-1.5">
-                        <span
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase ${
-                            u.dl_verified
-                              ? "text-emerald-400 border-emerald-400/20 bg-emerald-400/5"
-                              : "text-slate-600 border-slate-700 bg-slate-800"
-                          }`}
-                        >
-                          DL
-                        </span>
-                        <span
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase ${
-                            u.aadhaar_verified
-                              ? "text-emerald-400 border-emerald-400/20 bg-emerald-400/5"
-                              : "text-slate-600 border-slate-700 bg-slate-800"
-                          }`}
-                        >
-                          ID
-                        </span>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-wrap gap-1.5">
+                          {u.user_dl_url ? (
+                            <button
+                              onClick={() => setPreviewUrl(`${API_BASE}${u.user_dl_url}`)}
+                              className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase flex items-center gap-1 transition ${
+                                u.dl_verified
+                                  ? "text-emerald-400 border-emerald-400/20 bg-emerald-400/5 hover:bg-emerald-400/10"
+                                  : "text-blue-400 border-blue-400/20 bg-blue-400/5 hover:bg-blue-400/10"
+                              }`}
+                            >
+                              <FileImage className="w-2.5 h-2.5" /> DL
+                            </button>
+                          ) : (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase text-slate-600 border-slate-700 bg-slate-800">
+                              No DL
+                            </span>
+                          )}
+                          {u.user_aadhaar_url ? (
+                            <button
+                              onClick={() => setPreviewUrl(`${API_BASE}${u.user_aadhaar_url}`)}
+                              className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase flex items-center gap-1 transition ${
+                                u.aadhaar_verified
+                                  ? "text-emerald-400 border-emerald-400/20 bg-emerald-400/5 hover:bg-emerald-400/10"
+                                  : "text-purple-400 border-purple-400/20 bg-purple-400/5 hover:bg-purple-400/10"
+                              }`}
+                            >
+                              <FileImage className="w-2.5 h-2.5" /> ID
+                            </button>
+                          ) : (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase text-slate-600 border-slate-700 bg-slate-800">
+                              No ID
+                            </span>
+                          )}
+                        </div>
+                        {/* Status + Actions for KYC */}
+                        {(u.user_dl_url || u.user_aadhaar_url) && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase ${
+                              u.user_kyc_status === "approved" ? "text-emerald-400 bg-emerald-400/5 border-emerald-400/20" :
+                              u.user_kyc_status === "pending" ? "text-amber-400 bg-amber-400/5 border-amber-400/20" :
+                              u.user_kyc_status === "rejected" ? "text-red-400 bg-red-400/5 border-red-400/20" :
+                              "text-slate-400 bg-slate-400/5 border-slate-400/20"
+                            }`}>
+                              {u.user_kyc_status}
+                            </span>
+                            {u.user_kyc_status !== "approved" && (
+                              <button onClick={() => handleKycApproval(u.id, true)} className="text-[9px] text-emerald-400 hover:text-emerald-300">✓ Approve</button>
+                            )}
+                            {u.user_kyc_status !== "rejected" && (
+                              <button onClick={() => handleKycApproval(u.id, false)} className="text-[9px] text-red-400 hover:text-red-300">✗ Reject</button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
 

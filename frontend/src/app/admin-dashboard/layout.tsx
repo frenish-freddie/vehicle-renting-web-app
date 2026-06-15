@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Shield,
+  ShieldCheck,
   ChevronRight,
   Bell,
   Settings,
@@ -56,6 +57,18 @@ const NAV_ITEMS = [
     label: "Transactions",
     href: "/admin-dashboard/history",
     icon: History,
+    exact: false,
+  },
+  {
+    label: "Host KYC",
+    href: "/admin-dashboard/host-kyc",
+    icon: ShieldCheck,
+    exact: false,
+  },
+  {
+    label: "User KYC",
+    href: "/admin-dashboard/user-kyc",
+    icon: UserCheck,
     exact: false,
   },
 ];

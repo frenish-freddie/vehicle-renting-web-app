@@ -2,7 +2,7 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: "customer" | "owner" | "driver" | "admin";
+  role: "customer" | "owner" | "driver" | "admin" | "guest" | "host";
   phone_number?: string;
   profile_image?: string;
   created_at: string;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/services/api";
 import { LayoutDashboard, Car, Landmark, Clock, Settings, Search, Bell, User as UserIcon, TrendingUp, ArrowRight, LogOut, CheckCircle2, UploadCloud, AlertCircle, Loader2 } from "lucide-react";
@@ -318,35 +319,8 @@ function StatCard({ title, value, trend, color, accent }: { title: string, value
 }
 
 function DriverVerificationBanner({ status }: { status: string }) {
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
 
-  const handleUpload = async () => {
-    if (!file) return;
-    setUploading(true);
-    setError("");
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const res = await api.post("/api/drivers/upload-license", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (res.status !== 200 && res.status !== 201) {
-        throw new Error(res.data?.detail || "Upload failed");
-      }
-
-      window.location.reload();
-    } catch (err: any) {
-      setError(err.message);
-      setUploading(false);
-    }
-  };
 
   return (
     <div className="max-w-2xl mx-auto mt-12 bg-white border border-neutral-200 rounded-3xl p-8 shadow-sm text-center relative overflow-hidden">
@@ -376,49 +350,18 @@ function DriverVerificationBanner({ status }: { status: string }) {
               ? "Your previous license submission was rejected. Please upload a clear, valid driving license to start accepting trips." 
               : "Before you can start accepting trips, we need to verify your driving license. Please upload a clear photo or PDF."}
           </p>
-
-          {error && (
+          {status === "rejected" && (
             <div className="w-full bg-red-50 text-red-500 p-4 rounded-xl flex items-center justify-center gap-2 mb-6 font-semibold text-sm">
-              <AlertCircle className="w-4 h-4" /> {error}
+              <AlertCircle className="w-4 h-4" /> Your previous submission was rejected.
             </div>
           )}
 
-          <div className="w-full relative">
-            <input 
-              type="file" 
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              disabled={uploading}
-            />
-            <div className={`w-full border-2 border-dashed rounded-2xl p-8 transition-colors ${file ? 'border-primary-dark bg-neutral-50' : 'border-neutral-300 hover:border-primary-dark hover:bg-neutral-50'}`}>
-              {file ? (
-                <div className="flex flex-col items-center">
-                  <CheckCircle2 className="w-8 h-8 text-accent-green mb-2" />
-                  <span className="font-bold text-primary-dark">{file.name}</span>
-                  <span className="text-xs text-neutral-400 mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center">
-                  <UploadCloud className="w-8 h-8 text-neutral-400 mb-2" />
-                  <span className="font-bold text-primary-dark">Click or drag file to upload</span>
-                  <span className="text-xs text-neutral-400 mt-1">JPEG, PNG, WEBP, or PDF (Max 5MB)</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <button 
-            onClick={handleUpload}
-            disabled={!file || uploading}
-            className={`mt-6 w-full font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all ${!file || uploading ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed' : 'bg-primary-dark text-white hover:bg-black shadow-lg hover:-translate-y-0.5'}`}
+          <Link 
+            href="/onboarding/driver"
+            className="mt-2 inline-flex font-bold py-4 px-8 rounded-xl items-center justify-center gap-2 transition-all bg-primary-dark text-white hover:bg-black shadow-lg hover:-translate-y-0.5"
           >
-            {uploading ? (
-              <><Loader2 className="w-5 h-5 animate-spin" /> Uploading...</>
-            ) : (
-              <>Submit for Verification <ArrowRight className="w-5 h-5" /></>
-            )}
-          </button>
+            Go to Upload Portal <ArrowRight className="w-5 h-5" />
+          </Link>
         </div>
       )}
     </div>

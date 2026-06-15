@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/services/api";
 import { Mail, Lock, ShieldAlert, Sparkles, Loader2 } from "lucide-react";
 
 export default function Login() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const loginStore = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,9 +20,10 @@ export default function Login() {
 
   useEffect(() => {
     if (loginStore.token && loginStore.user) {
-      router.replace(`/dashboard/${loginStore.user.role}`);
+      const dest = searchParams?.get("redirect_to") || `/dashboard/${loginStore.user.role}`;
+      router.replace(dest);
     }
-  }, [loginStore.token, loginStore.user, router]);
+  }, [loginStore.token, loginStore.user, router, searchParams]);
 
   const handleGoogleLogin = async (googleEmail: string, googlePassword: string) => {
     setIsGoogleLoading(true);
@@ -40,9 +42,10 @@ export default function Login() {
         setIsGoogleLoading(false);
         setShowGoogleModal(false);
         if (decodedUser) {
-          const dest = decodedUser.role === "admin"
+          const redirectTo = searchParams?.get("redirect_to");
+          const dest = redirectTo ? redirectTo : (decodedUser.role === "admin"
             ? "/admin-dashboard"
-            : `/dashboard/${decodedUser.role}`;
+            : `/dashboard/${decodedUser.role}`);
           router.replace(dest);
         } else {
           router.replace("/");
@@ -75,9 +78,10 @@ export default function Login() {
       // Dynamic Redirect based on decoded role
       const decodedUser = useAuthStore.getState().user;
       if (decodedUser) {
-        const dest = decodedUser.role === "admin"
+        const redirectTo = searchParams?.get("redirect_to");
+        const dest = redirectTo ? redirectTo : (decodedUser.role === "admin"
           ? "/admin-dashboard"
-          : `/dashboard/${decodedUser.role}`;
+          : `/dashboard/${decodedUser.role}`);
         router.replace(dest);
       } else {
         router.replace("/");
@@ -173,8 +177,6 @@ export default function Login() {
             <span className="text-[10px] font-bold text-neutral-400">Quick Fill:</span>
             {[
               { role: "Admin", email: "admin@flexiride.com", pass: "admin123" },
-              { role: "Host", email: "host@flexiride.com", pass: "host123" },
-              { role: "Driver", email: "driver@flexiride.com", pass: "driver123" },
             ].map((u) => (
               <button 
                 key={u.role} 
@@ -264,8 +266,6 @@ export default function Login() {
               <div className="mt-6 space-y-2">
                 {[
                   { name: "Jane Guest", email: "jane@example.com", pass: "guest123", role: "Renter", initial: "J", color: "bg-purple-500" },
-                  { name: "John Host", email: "host@flexiride.com", pass: "host123", role: "Host / Owner", initial: "J", color: "bg-blue-500" },
-                  { name: "Mike Driver", email: "driver@flexiride.com", pass: "driver123", role: "Driver", initial: "M", color: "bg-emerald-500" },
                   { name: "Admin User", email: "admin@flexiride.com", pass: "admin123", role: "Administrator", initial: "A", color: "bg-red-500" },
                 ].map((acc) => (
                   <button

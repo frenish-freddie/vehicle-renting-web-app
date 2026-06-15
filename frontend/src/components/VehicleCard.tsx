@@ -21,7 +21,7 @@ export default function VehicleCard({ vehicle, isOwnVehicle = false }: VehicleCa
       {/* Vehicle Image Container */}
       <div className="relative h-48 w-full overflow-hidden bg-neutral-100">
         <img
-          src={vehicle.images || "/vehicles/placeholder.jpg"}
+          src={vehicle.images ? (vehicle.images.startsWith('http') ? vehicle.images : (vehicle.images.startsWith('/static/') ? `http://localhost:8000${vehicle.images}` : vehicle.images)) : "/vehicles/placeholder.jpg"}
           alt={`${vehicle.brand} ${vehicle.model}`}
           className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {

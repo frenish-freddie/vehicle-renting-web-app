@@ -105,12 +105,16 @@ export default function Register() {
         role: role,
       });
 
-      setSuccess("Account created successfully! Redirecting you to login portal...");
-      
-      // Redirect after short pause
-      setTimeout(() => {
-        router.push("/login");
-      }, 1500);
+      if (role === "host") {
+        setSuccess("Account created! Redirecting you to upload your KYC documents...");
+        setTimeout(() => router.push("/onboarding/host"), 1500);
+      } else if (role === "driver") {
+        setSuccess("Account created! Redirecting you to upload your driving license...");
+        setTimeout(() => router.push("/onboarding/driver"), 1500);
+      } else {
+        setSuccess("Account created successfully! Redirecting you to login portal...");
+        setTimeout(() => router.push("/login"), 1500);
+      }
     } catch (err: any) {
       let errMessage = "An unexpected error occurred. Please try again.";
       if (err.response?.data?.detail) {

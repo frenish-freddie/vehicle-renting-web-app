@@ -5,6 +5,7 @@ import { CreditCard, CalendarDays, Compass, ArrowRight, Star } from "lucide-reac
 import Link from "next/link";
 import ActiveTripCard from "@/components/trips/ActiveTripCard";
 import { useActiveTrips } from "@/hooks/useActiveTripStatus";
+import UserKycBanner from "@/components/UserKycBanner";
 
 export default function CustomerDashboard() {
   const { dashboardStats, isLoading } = useAuthStore();
@@ -28,6 +29,8 @@ export default function CustomerDashboard() {
 
   return (
     <div className="space-y-6">
+      <UserKycBanner />
+
       {/* Phase 5: Active Trip Dashboard Panel */}
       {!activeTripsLoading && activeTrips.length > 0 && (
         <div>

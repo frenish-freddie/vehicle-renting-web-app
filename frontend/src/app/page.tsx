@@ -85,6 +85,7 @@ export default function Home() {
                     src={vehicle.images || "/vehicles/placeholder.jpg"}
                     alt={vehicle.brand}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                     onError={(e) => {
                       e.currentTarget.src = "/vehicles/placeholder.jpg";
                     }}
@@ -105,7 +106,7 @@ export default function Home() {
                       <span className="font-extrabold text-xl">₹{vehicle.base_price}</span>
                       <span className="text-xs text-brand-muted">/day</span>
                     </div>
-                    <Link href={`/vehicles/${vehicle.id}`} className="font-bold text-brand-green hover:text-green-700">
+                    <Link href={`/search/${vehicle.id}`} className="font-bold text-brand-green hover:text-green-700">
                       Book Now
                     </Link>
                   </div>
@@ -135,7 +136,7 @@ export default function Home() {
               { name: "Vagamon", img: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=400&q=80" }
             ].map(dest => (
               <Link href={`/destinations/${dest.name.toLowerCase().replace(' ', '-')}`} key={dest.name} className="min-w-[240px] h-[300px] rounded-[16px] overflow-hidden relative group cursor-pointer snap-start shadow-[0_2px_12px_rgba(0,0,0,0.08)] block">
-                <img src={dest.img} alt={dest.name} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
+                <img src={dest.img} alt={dest.name} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 <h3 className="absolute bottom-5 left-5 text-white font-bold text-xl">{dest.name}</h3>
               </Link>
@@ -197,7 +198,7 @@ export default function Home() {
             
             <div className="flex flex-col md:flex-row gap-10 items-center mb-16 border-b border-brand-border pb-12">
               <div className="w-full md:w-1/2">
-                <img src="https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?w=800&q=80" alt="Verified hosts" className="w-full h-48 object-cover rounded-[12px] shadow-sm" />
+                <img src="https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?w=800&q=80" alt="Verified hosts" className="w-full h-48 object-cover rounded-[12px] shadow-sm" loading="lazy" />
               </div>
               <div className="w-full md:w-1/2 space-y-4">
                 <h3 className="text-3xl font-extrabold text-brand-accent">Verified cars. Trusted hosts.</h3>
@@ -207,7 +208,7 @@ export default function Home() {
 
             <div className="flex flex-col md:flex-row-reverse gap-10 items-center">
               <div className="w-full md:w-1/2">
-                <img src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800&q=80" alt="Safety first" className="w-full h-48 object-cover rounded-[12px] shadow-sm" />
+                <img src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800&q=80" alt="Safety first" className="w-full h-48 object-cover rounded-[12px] shadow-sm" loading="lazy" />
               </div>
               <div className="w-full md:w-1/2 space-y-4">
                 <h3 className="text-3xl font-extrabold text-brand-accent">Drive safe. Every time.</h3>
@@ -249,7 +250,7 @@ export default function Home() {
               return (
                 <Link href={`/blog/${slug}`} key={blog.title} className="w-[300px] shrink-0 bg-brand-card rounded-[16px] shadow-[0_2px_12px_rgba(0,0,0,0.08)] overflow-hidden group cursor-pointer block hover:shadow-[0_4px_20px_rgba(0,0,0,0.12)] transition-shadow">
                   <div className="h-[170px] overflow-hidden">
-                    <img src={blog.img} alt={blog.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <img src={blog.img} alt={blog.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
                   </div>
                   <div className="p-5">
                     <p className="text-xs text-brand-muted mb-3 font-semibold">{blog.date}</p>

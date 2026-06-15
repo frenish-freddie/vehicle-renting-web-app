@@ -28,6 +28,13 @@ export default function VehicleDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Current local time in YYYY-MM-DDTHH:mm format
+  const todayString = useMemo(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  }, []);
+
   // Booking fields state variables
   const [pickup, setPickup] = useState("Kochi Airport (COK)");
   const [drop, setDrop] = useState("Kochi Airport (COK)");
@@ -106,11 +113,21 @@ export default function VehicleDetails() {
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) {
-      router.push("/login?redirect=true");
+      router.push(`/login?redirect_to=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
     if (!startDate || !endDate) {
       alert("Please select pickup and return dates.");
+      return;
+    }
+
+    if (startDate < todayString) {
+      alert("Pickup time cannot be in the past.");
+      return;
+    }
+
+    if (endDate < startDate) {
+      alert("Return time cannot be before pickup time.");
       return;
     }
 
@@ -268,6 +285,7 @@ export default function VehicleDetails() {
                   <input
                     type="datetime-local"
                     required
+                    min={todayString}
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     className="w-full h-12 bg-surface border border-border px-4 rounded-input font-bold text-primary-dark focus:border-accent-amber outline-none transition-colors"
@@ -278,6 +296,7 @@ export default function VehicleDetails() {
                   <input
                     type="datetime-local"
                     required
+                    min={startDate || todayString}
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     className="w-full h-12 bg-surface border border-border px-4 rounded-input font-bold text-primary-dark focus:border-accent-amber outline-none transition-colors"

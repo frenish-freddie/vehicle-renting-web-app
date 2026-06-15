@@ -29,6 +29,9 @@ export interface AdminUser {
   is_host_approved: boolean;
   dl_verified: boolean;
   aadhaar_verified: boolean;
+  user_dl_url: string | null;
+  user_aadhaar_url: string | null;
+  user_kyc_status: string;
   created_at: string | null;
 }
 
@@ -44,6 +47,9 @@ export interface AdminVehicle {
   price_daily: number;
   is_approved: boolean;
   is_available: boolean;
+  images: string | null;
+  rc_url: string | null;
+  insurance_url: string | null;
   host_name: string;
   host_email: string;
   created_at: string | null;
@@ -98,6 +104,31 @@ export interface AdminTransaction {
   created_at: string | null;
 }
 
+export interface AdminHostKyc {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  host_kyc_status: "unsubmitted" | "pending" | "approved" | "rejected";
+  host_aadhaar_url: string | null;
+  host_pan_url: string | null;
+  is_host_approved: boolean;
+  created_at: string | null;
+}
+
+export interface AdminUserKyc {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  user_dl_url: string | null;
+  user_aadhaar_url: string | null;
+  user_kyc_status: string;
+  dl_verified: boolean;
+  aadhaar_verified: boolean;
+  created_at: string | null;
+}
+
 // ─── API Calls ──────────────────────────────────────────────────────────────
 
 export const adminApi = {
@@ -116,6 +147,16 @@ export const adminApi = {
 
   rejectUser: (userId: number) =>
     api.patch(`/api/admin/users/${userId}/reject`).then((r) => r.data),
+
+  approveUserKyc: async (id: number) => {
+    const res = await api.patch(`/api/admin/users/${id}/approve-kyc`);
+    return res.data;
+  },
+
+  rejectUserKyc: async (id: number) => {
+    const res = await api.patch(`/api/admin/users/${id}/reject-kyc`);
+    return res.data;
+  },
 
   deleteUser: (userId: number) =>
     api.delete(`/api/admin/users/${userId}`).then((r) => r.data),
@@ -163,4 +204,26 @@ export const adminApi = {
       .then(
         (r) => r.data as { total: number; transactions: AdminTransaction[] }
       ),
+
+  /** Host KYC document review */
+  getHostKyc: (page = 1, limit = 20, kyc_status?: string) =>
+    api
+      .get("/api/admin/host-kyc", {
+        params: { page, limit, ...(kyc_status && { kyc_status }) },
+      })
+      .then((r) => r.data as { total: number; hosts: AdminHostKyc[] }),
+
+  /** User KYC document review */
+  getUserKyc: (page = 1, limit = 20, status?: string) =>
+    api
+      .get("/api/admin/user-kyc", {
+        params: { page, limit, ...(status && { status }) },
+      })
+      .then((r) => r.data as { total: number; users: AdminUserKyc[] }),
+
+  approveHostKyc: (userId: number) =>
+    api.patch(`/api/admin/users/${userId}/approve-kyc`).then((r) => r.data),
+
+  rejectHostKyc: (userId: number) =>
+    api.patch(`/api/admin/users/${userId}/reject-kyc`).then((r) => r.data),
 };

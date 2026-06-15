@@ -12,7 +12,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  FileImage,
+  ExternalLink,
 } from "lucide-react";
+
+const API_BASE = "http://localhost:8000";
 
 const CATEGORY_COLORS: Record<string, string> = {
   car:         "bg-blue-400/10 text-blue-400 border-blue-400/20",
@@ -32,6 +36,7 @@ export default function AdminVehicles() {
   const [actionId, setActionId] = useState<number | null>(null);
   const [vehicleToReject, setVehicleToReject] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const LIMIT = 15;
 
   const fetchVehicles = useCallback(() => {
@@ -122,6 +127,29 @@ export default function AdminVehicles() {
         </div>
       )}
 
+      {/* Document Preview Modal */}
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <div className="max-w-2xl w-full bg-slate-900 border border-white/10 rounded-2xl p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-sm font-bold text-white">Document Preview</p>
+              <button onClick={() => setPreviewUrl(null)} className="text-slate-400 hover:text-white transition text-xl leading-none">&times;</button>
+            </div>
+            {previewUrl.endsWith(".pdf") ? (
+              <iframe src={previewUrl} className="w-full h-[500px] rounded-xl" />
+            ) : (
+              <img src={previewUrl} alt="doc" className="w-full max-h-[500px] object-contain rounded-xl" />
+            )}
+            <a href={previewUrl} target="_blank" rel="noreferrer" className="mt-3 flex items-center gap-2 text-xs text-blue-400 hover:underline">
+              <ExternalLink className="h-3.5 w-3.5" /> Open in new tab
+            </a>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
@@ -174,8 +202,10 @@ export default function AdminVehicles() {
             <thead>
               <tr className="border-b border-white/5">
                 <th className="text-left px-5 py-3.5 text-slate-500 font-semibold uppercase tracking-wider">Vehicle</th>
+                <th className="text-left px-4 py-3.5 text-slate-500 font-semibold uppercase tracking-wider hidden lg:table-cell">Photo</th>
                 <th className="text-left px-4 py-3.5 text-slate-500 font-semibold uppercase tracking-wider">Category</th>
                 <th className="text-left px-4 py-3.5 text-slate-500 font-semibold uppercase tracking-wider hidden sm:table-cell">Host</th>
+                <th className="text-left px-4 py-3.5 text-slate-500 font-semibold uppercase tracking-wider hidden xl:table-cell">Documents</th>
                 <th className="text-left px-4 py-3.5 text-slate-500 font-semibold uppercase tracking-wider hidden md:table-cell">Daily Rate</th>
                 <th className="text-left px-4 py-3.5 text-slate-500 font-semibold uppercase tracking-wider">Status</th>
                 <th className="text-right px-5 py-3.5 text-slate-500 font-semibold uppercase tracking-wider">Actions</th>
@@ -198,6 +228,21 @@ export default function AdminVehicles() {
                         <p className="text-slate-500 mt-0.5 font-mono">{v.registration_no}</p>
                       </div>
                     </td>
+                    {/* Vehicle photo thumbnail */}
+                    <td className="px-4 py-4 hidden lg:table-cell">
+                      {v.images ? (
+                        <img
+                          src={v.images.startsWith('http') ? v.images : (v.images.startsWith('/static/') ? `http://localhost:8000${v.images}` : v.images)}
+                          alt={`${v.brand} ${v.model}`}
+                          className="h-11 w-16 object-cover rounded-lg border border-white/10 bg-slate-800"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="h-11 w-16 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-center">
+                          <span className="text-[9px] text-slate-600">No photo</span>
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-4">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${CATEGORY_COLORS[v.category] ?? "bg-slate-800 text-slate-400 border-slate-700"}`}>
                         {v.category.replace("_", " ")}
@@ -206,6 +251,30 @@ export default function AdminVehicles() {
                     <td className="px-4 py-4 text-slate-400 hidden sm:table-cell">
                       <p className="font-semibold text-slate-300">{v.host_name}</p>
                       <p className="text-slate-600">{v.host_email}</p>
+                    </td>
+                    <td className="px-4 py-4 hidden xl:table-cell">
+                      <div className="flex flex-col gap-1.5">
+                        {v.rc_url ? (
+                          <button
+                            onClick={() => setPreviewUrl(`${API_BASE}${v.rc_url}`)}
+                            className="text-[9px] font-bold px-2 py-1 rounded border uppercase text-emerald-400 border-emerald-400/20 bg-emerald-400/5 hover:bg-emerald-400/10 transition flex items-center gap-1 w-max"
+                          >
+                            <FileImage className="w-2.5 h-2.5" /> RC
+                          </button>
+                        ) : (
+                          <span className="text-[9px] font-bold px-2 py-1 rounded border uppercase text-slate-600 border-slate-700 bg-slate-800 w-max">No RC</span>
+                        )}
+                        {v.insurance_url ? (
+                          <button
+                            onClick={() => setPreviewUrl(`${API_BASE}${v.insurance_url}`)}
+                            className="text-[9px] font-bold px-2 py-1 rounded border uppercase text-blue-400 border-blue-400/20 bg-blue-400/5 hover:bg-blue-400/10 transition flex items-center gap-1 w-max"
+                          >
+                            <FileImage className="w-2.5 h-2.5" /> Insur
+                          </button>
+                        ) : (
+                          <span className="text-[9px] font-bold px-2 py-1 rounded border uppercase text-slate-600 border-slate-700 bg-slate-800 w-max">No Insur</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-4 hidden md:table-cell">
                       <span className="font-bold text-white">₹{v.price_daily.toLocaleString("en-IN")}</span>

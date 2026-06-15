@@ -46,6 +46,16 @@ class User(Base):
     referral_code = Column(String, unique=True, nullable=True)
     preferred_language = Column(String, default="English")
     is_host_approved = Column(Boolean, default=True)  # Admin can suspend host accounts
+    # Host KYC document fields
+    host_aadhaar_url  = Column(String, nullable=True)                  # Aadhaar / Govt ID upload URL
+    host_pan_url      = Column(String, nullable=True)                  # PAN / tax document upload URL
+    host_kyc_status   = Column(String, default="unsubmitted")          # unsubmitted | pending | approved | rejected
+    
+    # User KYC document fields
+    user_dl_url       = Column(String, nullable=True)                  # Driving License URL
+    user_aadhaar_url  = Column(String, nullable=True)                  # Aadhaar URL
+    user_kyc_status   = Column(String, default="unsubmitted")          # unsubmitted | pending | approved | rejected
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     vehicles = relationship("Vehicle", back_populates="owner")
@@ -93,6 +103,8 @@ class Vehicle(Base):
     excess_km_charge = Column(Float, default=0.0)
     fuel_policy = Column(String, default="full-to-full")
     documents_required = Column(String) # JSON
+    rc_url = Column(String, nullable=True) # Uploaded Registration Certificate
+    insurance_url = Column(String, nullable=True) # Uploaded Insurance document
     
     rating_avg = Column(Float, default=0.0)
     total_bookings = Column(Integer, default=0)

@@ -1,6 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import os
+import uuid
+from pathlib import Path
 from app.database.connection import get_db
 from app.models.models import Vehicle, User, RoleEnum, Location
 from app.schemas.schemas import VehicleCreate, VehicleUpdate, VehicleResponse, DeliveryOptionsResponse
@@ -86,6 +89,29 @@ def get_delivery_options(id: int, db: Session = Depends(get_db)):
         "host_lat": loc.lat if loc else None,
         "host_lng": loc.lng if loc else None,
     }
+
+# Upload a document for a vehicle (photo, RC, insurance, etc.)
+@router.post("/upload-doc", response_model=dict)
+async def upload_vehicle_doc(
+    file: UploadFile = File(...),
+    current_user: User = Depends(RoleChecker([RoleEnum.host, RoleEnum.admin]))
+):
+    try:
+        # Create unique filename
+        ext = file.filename.split('.')[-1]
+        new_filename = f"{uuid.uuid4().hex}.{ext}"
+        
+        static_dir = Path("static/vehicle_docs")
+        static_dir.mkdir(parents=True, exist_ok=True)
+        file_path = static_dir / new_filename
+
+        contents = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+
+        return {"url": f"/static/vehicle_docs/{new_filename}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload document: {str(e)}")
 
 # Host / Admin: Create new listing
 @router.post("", response_model=VehicleResponse, status_code=status.HTTP_201_CREATED)

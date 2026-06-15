@@ -140,6 +140,9 @@ api.interceptors.request.use(
     // Automatically transform outgoing frontend model data into backend model format
     if (config.data) {
       config.data = transformRequest(config.data);
+      if (config.data instanceof FormData) {
+        delete config.headers["Content-Type"];
+      }
     }
     return config;
   },

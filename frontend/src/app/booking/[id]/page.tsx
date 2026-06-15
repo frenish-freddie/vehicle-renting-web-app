@@ -16,7 +16,8 @@ export default function BookingCheckoutFlow() {
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [kycStatus, setKycStatus] = useState<string>("unsubmitted");
+
   // URL params parsed
   const startParam = searchParams.get("start") || "";
   const endParam = searchParams.get("end") || "";
@@ -47,7 +48,7 @@ export default function BookingCheckoutFlow() {
     host_lng: number | null;
   } | null>(null);
   const [deliveryOptionsLoading, setDeliveryOptionsLoading] = useState(false);
-  
+
   // Addons state
   const [addOns, setAddOns] = useState({
     insurance: true,
@@ -58,6 +59,10 @@ export default function BookingCheckoutFlow() {
   useEffect(() => {
     if (!token) {
       router.push("/login?redirect=true");
+    } else {
+      api.get("/api/user-kyc/status")
+        .then(res => setKycStatus(res.data.user_kyc_status))
+        .catch(() => setKycStatus("unsubmitted"));
     }
   }, [token, router]);
 
@@ -125,9 +130,9 @@ export default function BookingCheckoutFlow() {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   };
@@ -168,11 +173,11 @@ export default function BookingCheckoutFlow() {
           deliveryLat,
           deliveryLng
         );
-        
+
         if (deliveryOptions.max_delivery_radius_km > 0 && deliveryDistance > deliveryOptions.max_delivery_radius_km) {
           isOutOfDeliveryRange = true;
         }
-        
+
         const perKmFee = deliveryOptions.delivery_fee_per_km || 0;
         const flatCharge = deliveryOptions.delivery_charge_flat || 0;
         deliveryCost = Math.round((flatCharge + deliveryDistance * perKmFee) * 100) / 100;
@@ -200,6 +205,11 @@ export default function BookingCheckoutFlow() {
   }, [vehicle, startParam, endParam, tripType, selectedDriver, pickupType, deliveryOptions, userDeliveryAddress, addOns]);
 
   const handlePayment = async () => {
+    if (kycStatus !== "approved") {
+      alert("Booking is disabled until your KYC is approved.");
+      return;
+    }
+    
     if (!pricing || !vehicle) return;
     setIsPaying(true);
     try {
@@ -251,8 +261,8 @@ export default function BookingCheckoutFlow() {
       });
 
       setStep(4); // Success step
-    } catch (err) {
-      alert("Checkout failed. Please try again.");
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Checkout failed. Please try again.");
     } finally {
       setIsPaying(false);
     }
@@ -269,9 +279,9 @@ export default function BookingCheckoutFlow() {
   return (
     <div className="bg-surface min-h-screen">
       <HeroNavbar />
-      
+
       <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8 mt-16">
-        
+
         {/* Stepper Header */}
         <div className="mb-10">
           <h1 className="text-3xl font-display font-bold text-primary-dark uppercase mb-6">Checkout</h1>
@@ -284,10 +294,9 @@ export default function BookingCheckoutFlow() {
               { num: 4, title: "Done" }
             ].map((s) => (
               <div key={s.num} className="relative z-10 flex flex-col items-center gap-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg border-2 ${
-                  step > s.num ? "bg-accent-green border-accent-green text-white" :
-                  step === s.num ? "bg-primary-dark border-primary-dark text-white" : "bg-white border-border text-text-muted"
-                }`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg border-2 ${step > s.num ? "bg-accent-green border-accent-green text-white" :
+                    step === s.num ? "bg-primary-dark border-primary-dark text-white" : "bg-white border-border text-text-muted"
+                  }`}>
                   {step > s.num ? <CheckCircle className="w-5 h-5" /> : s.num}
                 </div>
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${step >= s.num ? "text-primary-dark" : "text-text-muted"}`}>{s.title}</span>
@@ -296,11 +305,27 @@ export default function BookingCheckoutFlow() {
           </div>
         </div>
 
+        {kycStatus !== "approved" && step < 4 && (
+          <div className="mb-8 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-red-500/20 rounded-xl flex items-center justify-center text-red-500">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-red-600 dark:text-red-400">KYC Verification Required</h3>
+                <p className="text-xs text-red-600/70 dark:text-red-400/70">
+                  Your identity documents are currently <strong>{kycStatus}</strong>. You must have an approved KYC to book a vehicle.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Main Flow Area */}
           <div className="lg:col-span-2">
-            
+
             {step === 1 && (
               <div className="bg-white p-8 rounded-card border border-border shadow-sm">
                 <h2 className="text-xl font-display font-bold text-primary-dark uppercase mb-6 border-b border-border pb-4">1. Review Trip Details</h2>
@@ -329,11 +354,10 @@ export default function BookingCheckoutFlow() {
                     {/* Self Drive card */}
                     <button
                       onClick={() => { setTripType("self_drive"); setSelectedDriver(null); }}
-                      className={`relative flex flex-col items-start gap-2 p-4 rounded-card border-2 transition-all duration-200 text-left ${
-                        tripType === "self_drive"
+                      className={`relative flex flex-col items-start gap-2 p-4 rounded-card border-2 transition-all duration-200 text-left ${tripType === "self_drive"
                           ? "border-primary-dark bg-primary-dark/5"
                           : "border-border hover:border-text-muted"
-                      }`}
+                        }`}
                     >
                       {tripType === "self_drive" && <CheckCircle className="absolute top-3 right-3 w-4 h-4 text-primary-dark" />}
                       <Car className="w-5 h-5 text-primary-dark" />
@@ -344,11 +368,10 @@ export default function BookingCheckoutFlow() {
                     {/* With Driver card */}
                     <button
                       onClick={() => setTripType("with_driver")}
-                      className={`relative flex flex-col items-start gap-2 p-4 rounded-card border-2 transition-all duration-200 text-left ${
-                        tripType === "with_driver"
+                      className={`relative flex flex-col items-start gap-2 p-4 rounded-card border-2 transition-all duration-200 text-left ${tripType === "with_driver"
                           ? "border-driver-gold bg-driver-gold/5"
                           : "border-border hover:border-text-muted"
-                      }`}
+                        }`}
                     >
                       {tripType === "with_driver" && <CheckCircle className="absolute top-3 right-3 w-4 h-4 text-driver-gold" />}
                       <UserIcon className="w-5 h-5 text-driver-gold" />
@@ -374,11 +397,10 @@ export default function BookingCheckoutFlow() {
                           <div
                             key={d.id}
                             onClick={() => setSelectedDriver(d)}
-                            className={`flex items-center gap-4 p-3 rounded-input border cursor-pointer transition-all ${
-                              selectedDriver?.id === d.id
+                            className={`flex items-center gap-4 p-3 rounded-input border cursor-pointer transition-all ${selectedDriver?.id === d.id
                                 ? "border-driver-gold bg-driver-gold/10"
                                 : "border-border bg-white hover:border-driver-gold/50"
-                            }`}
+                              }`}
                           >
                             {/* Avatar */}
                             <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center shrink-0 overflow-hidden">
@@ -420,11 +442,10 @@ export default function BookingCheckoutFlow() {
                       {/* I'll Pick Up */}
                       <button
                         onClick={() => { setPickupType("self_pickup"); setUserDeliveryAddress(""); }}
-                        className={`relative flex flex-col items-start gap-2 p-4 rounded-card border-2 transition-all duration-200 text-left ${
-                          pickupType === "self_pickup"
+                        className={`relative flex flex-col items-start gap-2 p-4 rounded-card border-2 transition-all duration-200 text-left ${pickupType === "self_pickup"
                             ? "border-primary-dark bg-primary-dark/5"
                             : "border-border hover:border-text-muted"
-                        }`}
+                          }`}
                       >
                         {pickupType === "self_pickup" && <CheckCircle className="absolute top-3 right-3 w-4 h-4 text-primary-dark" />}
                         <MapPin className="w-5 h-5 text-primary-dark" />
@@ -438,13 +459,12 @@ export default function BookingCheckoutFlow() {
                           if (deliveryOptions?.host_delivery_available) setPickupType("host_delivery");
                         }}
                         disabled={!deliveryOptions?.host_delivery_available}
-                        className={`relative flex flex-col items-start gap-2 p-4 rounded-card border-2 transition-all duration-200 text-left ${
-                          !deliveryOptions?.host_delivery_available
+                        className={`relative flex flex-col items-start gap-2 p-4 rounded-card border-2 transition-all duration-200 text-left ${!deliveryOptions?.host_delivery_available
                             ? "border-border opacity-50 cursor-not-allowed"
                             : pickupType === "host_delivery"
                               ? "border-accent-green bg-accent-green/5"
                               : "border-border hover:border-text-muted"
-                        }`}
+                          }`}
                       >
                         {pickupType === "host_delivery" && <CheckCircle className="absolute top-3 right-3 w-4 h-4 text-accent-green" />}
                         <Truck className="w-5 h-5 text-accent-green" />
@@ -518,10 +538,10 @@ export default function BookingCheckoutFlow() {
             {step === 2 && (
               <div className="bg-white p-8 rounded-card border border-border shadow-sm">
                 <h2 className="text-xl font-display font-bold text-primary-dark uppercase mb-6 border-b border-border pb-4">2. Select Add-ons</h2>
-                
+
                 <div className="space-y-4">
                   <label className={`flex items-start gap-4 p-4 border rounded-card cursor-pointer transition-colors ${addOns.insurance ? "border-accent-amber bg-accent-amber/5" : "border-border hover:border-text-muted"}`}>
-                    <input type="checkbox" checked={addOns.insurance} onChange={(e) => setAddOns({...addOns, insurance: e.target.checked})} className="mt-1 w-5 h-5 accent-accent-amber" />
+                    <input type="checkbox" checked={addOns.insurance} onChange={(e) => setAddOns({ ...addOns, insurance: e.target.checked })} className="mt-1 w-5 h-5 accent-accent-amber" />
                     <div className="flex-1">
                       <div className="flex justify-between">
                         <span className="font-bold text-primary-dark">Comprehensive Trip Insurance</span>
@@ -530,10 +550,10 @@ export default function BookingCheckoutFlow() {
                       <p className="text-xs text-text-muted mt-1">Zero liability on damages up to ₹5 Lakhs.</p>
                     </div>
                   </label>
-                  
+
                   {vehicle.vehicle_category === "two_wheeler" && (
                     <label className={`flex items-start gap-4 p-4 border rounded-card cursor-pointer transition-colors ${addOns.helmet ? "border-accent-amber bg-accent-amber/5" : "border-border hover:border-text-muted"}`}>
-                      <input type="checkbox" checked={addOns.helmet} onChange={(e) => setAddOns({...addOns, helmet: e.target.checked})} className="mt-1 w-5 h-5 accent-accent-amber" />
+                      <input type="checkbox" checked={addOns.helmet} onChange={(e) => setAddOns({ ...addOns, helmet: e.target.checked })} className="mt-1 w-5 h-5 accent-accent-amber" />
                       <div className="flex-1">
                         <div className="flex justify-between">
                           <span className="font-bold text-primary-dark">Extra Helmet</span>
@@ -545,7 +565,7 @@ export default function BookingCheckoutFlow() {
                   )}
 
                   <label className={`flex items-start gap-4 p-4 border rounded-card cursor-pointer transition-colors ${addOns.fuel_prepay ? "border-accent-amber bg-accent-amber/5" : "border-border hover:border-text-muted"}`}>
-                    <input type="checkbox" checked={addOns.fuel_prepay} onChange={(e) => setAddOns({...addOns, fuel_prepay: e.target.checked})} className="mt-1 w-5 h-5 accent-accent-amber" />
+                    <input type="checkbox" checked={addOns.fuel_prepay} onChange={(e) => setAddOns({ ...addOns, fuel_prepay: e.target.checked })} className="mt-1 w-5 h-5 accent-accent-amber" />
                     <div className="flex-1">
                       <div className="flex justify-between">
                         <span className="font-bold text-primary-dark">Prepaid Fuel</span>
@@ -568,7 +588,7 @@ export default function BookingCheckoutFlow() {
             {step === 3 && (
               <div className="bg-white p-8 rounded-card border border-border shadow-sm">
                 <h2 className="text-xl font-display font-bold text-primary-dark uppercase mb-6 border-b border-border pb-4">3. Payment (Sandbox)</h2>
-                
+
                 <div className="bg-surface border border-border rounded-card p-6 flex items-center gap-4 mb-8">
                   <ShieldCheck className="w-8 h-8 text-accent-green" />
                   <div>
@@ -591,7 +611,7 @@ export default function BookingCheckoutFlow() {
                 </div>
 
                 <div className="flex gap-4">
-                  <div 
+                  <div
                     onClick={() => setPaymentMethod("card")}
                     className={`flex-1 border-2 rounded-card p-4 relative overflow-hidden cursor-pointer transition-colors ${paymentMethod === "card" ? "border-primary-dark bg-primary-dark/5" : "border-border hover:border-text-muted"}`}
                   >
@@ -600,24 +620,56 @@ export default function BookingCheckoutFlow() {
                     <span className="font-bold text-primary-dark flex items-center gap-2"><CreditCard className="w-4 h-4" /> Saved Card</span>
                     <span className="text-sm text-text-muted block mt-4">**** **** **** 4242</span>
                   </div>
-                  <div 
+                  <div
                     onClick={() => setPaymentMethod("upi")}
                     className={`flex-1 border-2 rounded-card p-4 relative overflow-hidden cursor-pointer transition-colors ${paymentMethod === "upi" ? "border-primary-dark bg-primary-dark/5" : "border-border hover:border-text-muted"}`}
                   >
                     {paymentMethod === "upi" && <div className="absolute top-2 right-2"><CheckCircle className="w-5 h-5 text-primary-dark" /></div>}
                     <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted block mb-1">Method</span>
                     <span className="font-bold text-primary-dark">UPI / Netbanking</span>
-                    <span className="text-sm text-text-muted block mt-4">Add new</span>
+                    <span className="text-sm text-text-muted block mt-4">Scan QR</span>
                   </div>
                 </div>
 
-                <div className="flex justify-between mt-8">
+                {paymentMethod === "upi" && (
+                  <div className="mt-6 border border-border rounded-xl p-6 bg-white flex flex-col items-center text-center animate-fade-in shadow-sm">
+                    <p className="text-sm text-text-muted mb-4">Scan the QR code with any UPI app to securely pay the 30% advance deposit.</p>
+                    <div className="bg-white p-2 border-2 border-primary-dark rounded-xl inline-block mb-3">
+                      {/* Using a placeholder static icon for the QR code demonstration */}
+                      <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary-dark">
+                        <rect width="5" height="5" x="3" y="3" rx="1" />
+                        <rect width="5" height="5" x="16" y="3" rx="1" />
+                        <rect width="5" height="5" x="3" y="16" rx="1" />
+                        <path d="M21 16h-3a2 2 0 0 0-2 2v3" />
+                        <path d="M21 21v.01" />
+                        <path d="M12 7v3a2 2 0 0 1-2 2H7" />
+                        <path d="M3 12h.01" />
+                        <path d="M12 3h.01" />
+                        <path d="M12 16v.01" />
+                        <path d="M16 12h1" />
+                        <path d="M21 12v.01" />
+                        <path d="M12 21v-1" />
+                      </svg>
+                    </div>
+                    <div className="flex items-center gap-2 bg-surface px-4 py-2 rounded-lg border border-border">
+                      <span className="text-xs font-bold text-text-muted uppercase tracking-wider">UPI ID:</span>
+                      <span className="text-sm font-bold text-primary-dark">flexiride.admin@okaxis</span>
+                    </div>
+                    <p className="text-xs text-text-muted mt-4">After a successful transaction, click the button below to confirm.</p>
+                  </div>
+                )}
+
+                <div className="flex justify-between w-full mt-8">
                   <button onClick={() => setStep(2)} className="border border-border text-text-muted h-12 px-8 rounded-input font-bold uppercase tracking-wider text-sm hover:bg-surface">Back</button>
                   <div className="flex flex-col items-end gap-1.5">
-                    <button onClick={handlePayment} disabled={isPaying} className="bg-accent-green text-white h-12 px-8 rounded-input font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 hover:bg-[#10a310]">
-                      {isPaying ? <Loader2 className="w-5 h-5 animate-spin" /> : `Pay ₹${pricing.partial} Now →`}
+                    <button onClick={handlePayment} disabled={isPaying || kycStatus !== "approved"} className="bg-accent-green text-white h-12 px-8 rounded-input font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 hover:bg-[#10a310] disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isPaying ? <Loader2 className="w-5 h-5 animate-spin" /> : (paymentMethod === "upi" ? `I Have Paid ₹${pricing.partial} →` : `Pay ₹${pricing.partial} Now →`)}
                     </button>
-                    <p className="text-[11px] text-text-muted">Remaining ₹{pricing.remaining} is collected after your trip ends.</p>
+                    {kycStatus !== "approved" ? (
+                      <p className="text-[11px] font-bold text-red-500">Booking disabled until KYC is approved.</p>
+                    ) : (
+                      <p className="text-[11px] text-text-muted">Remaining ₹{pricing.remaining} is collected after your trip ends.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -641,7 +693,7 @@ export default function BookingCheckoutFlow() {
           <aside className="lg:col-span-1">
             <div className="bg-white p-6 rounded-card border border-border shadow-sm sticky top-24">
               <h3 className="font-display font-bold text-primary-dark uppercase border-b border-border pb-4 mb-4">Trip Summary</h3>
-              
+
               <div className="flex gap-4 mb-6">
                 <div className="w-20 h-16 rounded bg-neutral-100 overflow-hidden">
                   <img

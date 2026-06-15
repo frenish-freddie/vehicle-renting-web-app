@@ -25,6 +25,8 @@ export default function VehicleDetails() {
   const router = useRouter();
   const { user, token } = useAuthStore();
 
+  const todayString = new Date().toISOString().split("T")[0];
+
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,15 +104,25 @@ export default function VehicleDetails() {
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) {
-      router.push("/login?redirect=true");
+      router.push(`/login?redirect_to=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
     if (!startDate || !endDate) {
       alert("Please select pickup and return dates.");
       return;
     }
+    
+    if (startDate < todayString) {
+      alert("Pickup date cannot be in the past.");
+      return;
+    }
 
-    const params = new URLSearchParams({
+    if (endDate < startDate) {
+      alert("Return date cannot be before pickup date.");
+      return;
+    }
+
+    const queryParams = new URLSearchParams({
       start: startDate,
       end: endDate,
       pickup: pickup,
@@ -118,7 +130,7 @@ export default function VehicleDetails() {
       driver: driverIncluded ? "true" : "false"
     });
     
-    router.push(`/booking/${id}?${params.toString()}`);
+    router.push(`/booking/${id}?${queryParams.toString()}`);
   };
 
   const confirmPayment = async () => {
@@ -167,7 +179,7 @@ export default function VehicleDetails() {
           <div className="bg-white border border-neutral-200/50 rounded-3xl overflow-hidden shadow-sm dark:bg-neutral-900 dark:border-neutral-800/80">
             <div className="relative aspect-[21/9] w-full bg-slate-100 dark:bg-neutral-800">
               <img
-                src={vehicle.images || "/vehicles/placeholder.jpg"}
+                src={vehicle.images ? (vehicle.images.startsWith('http') ? vehicle.images : (vehicle.images.startsWith('/static/') ? `http://localhost:8000${vehicle.images}` : vehicle.images)) : "/vehicles/placeholder.jpg"}
                 alt={vehicle.vehicle_name}
                 className="h-full w-full object-cover"
                 onError={(e) => {
@@ -269,6 +281,7 @@ export default function VehicleDetails() {
                 <input
                   type="date"
                   required
+                  min={todayString}
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="w-full h-11 bg-neutral-50 border border-neutral-200/50 px-3 rounded-xl text-xs outline-none text-neutral-800 focus:border-primary-500 dark:bg-neutral-800 dark:border-neutral-700/80 dark:text-neutral-200"
@@ -283,6 +296,7 @@ export default function VehicleDetails() {
                 <input
                   type="date"
                   required
+                  min={startDate || todayString}
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-full h-11 bg-neutral-50 border border-neutral-200/50 px-3 rounded-xl text-xs outline-none text-neutral-800 focus:border-primary-500 dark:bg-neutral-800 dark:border-neutral-700/80 dark:text-neutral-200"

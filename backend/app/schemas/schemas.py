@@ -109,6 +109,8 @@ class VehicleBase(BaseModel):
     host_delivery_available: bool = False
     delivery_fee_per_km: float = 0.0
     max_delivery_radius_km: float = 0.0
+    rc_url: Optional[str] = None
+    insurance_url: Optional[str] = None
     price_hourly: Optional[float] = None
     price_daily: float
     price_weekly: Optional[float] = None

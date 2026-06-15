@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import FlexiRideLoader from "./FlexiRideLoader";
 
-const SAFETY_TIMEOUT_MS = 2500; // Auto-hide loading if page doesn't redirect (e.g. standard buttons, modal opens, form errors)
+const SAFETY_TIMEOUT_MS = 800; // Auto-hide after 800ms if no route change detected
 
 export default function NavigationLoader() {
   const [loading, setLoading] = useState(false);
@@ -84,12 +84,21 @@ export default function NavigationLoader() {
           classes.includes("carousel-arrow") ||
           classes.includes("slide-nav") ||
           classes.includes("chatbot-toggle") ||
-          id.includes("chatbot")
+          id.includes("chatbot") ||
+          // Don't trigger loader for filter pills, toggles, or form submissions
+          (elem as HTMLElement).closest('form') !== null ||
+          (elem as HTMLElement).closest('[role="tablist"]') !== null ||
+          (elem as HTMLElement).closest('[role="tab"]') !== null
         ) {
           return;
         }
 
-        triggerLoader();
+        // Only trigger loader if the button is likely to navigate (has an href child or type="button" without form)
+        const hasHrefChild = (elem as HTMLElement).querySelector('a[href]');
+        const isNavButton = (elem as HTMLButtonElement).type !== 'submit' && hasHrefChild;
+        if (!hasHrefChild && !(elem as HTMLElement).closest('a')) {
+          return;
+        }
       }
     };
 

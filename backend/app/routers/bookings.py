@@ -34,6 +34,13 @@ def create_booking(
             detail="Start date must be before the end date"
         )
 
+    # Check KYC status
+    if current_user.user_kyc_status != "approved":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Your KYC documents must be approved before you can book a vehicle."
+        )
+
     # Check vehicle existence
     vehicle = db.query(Vehicle).filter(Vehicle.id == booking_in.vehicle_id).first()
     if not vehicle:

@@ -1,16 +1,104 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/services/api";
-import { Sparkles, Landmark, CalendarRange, Plus, CheckCircle2, XCircle, Clock, Loader2, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, Landmark, CalendarRange, Plus, CheckCircle2, XCircle, Clock, Loader2, ArrowRight, AlertTriangle, ShieldCheck, X, FileImage } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import ActiveTripCard from "@/components/trips/ActiveTripCard";
 import { useActiveTrips } from "@/hooks/useActiveTripStatus";
 
+interface DocUploadState {
+  file: File | null;
+  preview: string | null;
+  uploading: boolean;
+  uploadedUrl: string | null;
+  error: string | null;
+}
+
+const initialUploadState = (): DocUploadState => ({
+  file: null, preview: null, uploading: false, uploadedUrl: null, error: null
+});
+
+function DocumentUploadZone({
+  label, hint, accept, state, onChange,
+}: {
+  label: string;
+  hint: string;
+  accept: string;
+  state: DocUploadState;
+  onChange: (file: File) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) onChange(file);
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-bold text-neutral-500 dark:text-neutral-400">{label}</label>
+      <div
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+        className={`relative border-2 border-dashed rounded-2xl p-4 cursor-pointer transition-all duration-200 flex flex-col items-center justify-center gap-2 min-h-[120px] group
+          ${state.uploadedUrl
+            ? "border-emerald-500/50 bg-emerald-500/5"
+            : "border-neutral-200 dark:border-neutral-800 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10"
+          }`}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onChange(f); }}
+        />
+
+        {state.uploading ? (
+          <Loader2 className="h-6 w-6 text-primary-500 animate-spin" />
+        ) : state.uploadedUrl ? (
+          <>
+            <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+            <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">Uploaded</p>
+          </>
+        ) : (
+          <>
+            {state.preview ? (
+              <img src={state.preview} alt="preview" className="h-12 w-auto rounded-lg object-cover opacity-80" />
+            ) : (
+              <div className="h-10 w-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center group-hover:bg-white transition">
+                <FileImage className="h-5 w-5 text-neutral-400" />
+              </div>
+            )}
+            <div className="text-center">
+              <p className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">Drag & drop or <span className="text-primary-500">browse</span></p>
+              <p className="text-[10px] text-neutral-400 mt-0.5">{hint}</p>
+            </div>
+          </>
+        )}
+        {state.error && <p className="text-[10px] text-red-500 font-semibold mt-1">{state.error}</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function OwnerDashboard() {
   const { dashboardStats, isLoading, fetchDashboardStats } = useAuthStore();
   const { activeTrips, isLoading: activeTripsLoading, refetch } = useActiveTrips();
+  
+  const [kycStatus, setKycStatus] = useState<string | null>(null);
+  const [showKycBanner, setShowKycBanner] = useState(true);
+
+  useEffect(() => {
+    api.get("/api/host-kyc/status")
+      .then((r) => setKycStatus(r.data.host_kyc_status))
+      .catch(() => {});
+  }, []);
   
   // Form toggles
   const [showAddForm, setShowAddForm] = useState(false);
@@ -30,7 +118,31 @@ export default function OwnerDashboard() {
   const [driverAvailable, setDriverAvailable] = useState(false);
   const [driverCost, setDriverCost] = useState(800.0);
   const [location, setLocation] = useState("Indiranagar, Bangalore");
-  const [imageUrl, setImageUrl] = useState("");
+  const [photoState, setPhotoState] = useState<DocUploadState>(initialUploadState());
+  const [rcState, setRcState] = useState<DocUploadState>(initialUploadState());
+  const [insuranceState, setInsuranceState] = useState<DocUploadState>(initialUploadState());
+
+  const handleUploadFile = async (file: File, stateSetter: React.Dispatch<React.SetStateAction<DocUploadState>>) => {
+    stateSetter(prev => ({
+      ...prev,
+      file,
+      preview: URL.createObjectURL(file),
+      uploading: true,
+      error: null
+    }));
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await api.post("/api/vehicles/upload-doc", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      stateSetter(prev => ({ ...prev, uploading: false, uploadedUrl: res.data.url }));
+    } catch (error) {
+      stateSetter(prev => ({ ...prev, uploading: false, error: "Upload failed" }));
+    }
+  };
 
   const handleAddVehicle = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +163,9 @@ export default function OwnerDashboard() {
         driver_available: driverAvailable,
         driver_cost: driverAvailable ? Number(driverCost) : 0.0,
         location,
-        images: imageUrl || "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600"
+        images: photoState.uploadedUrl || "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=600",
+        rc_url: rcState.uploadedUrl,
+        insurance_url: insuranceState.uploadedUrl
       });
 
       alert("Vehicle listed successfully!");
@@ -62,7 +176,9 @@ export default function OwnerDashboard() {
       setBrand("");
       setModel("");
       setRegNo("");
-      setImageUrl("");
+      setPhotoState(initialUploadState());
+      setRcState(initialUploadState());
+      setInsuranceState(initialUploadState());
 
       // Reload analytics & vehicles lists
       await fetchDashboardStats();
@@ -111,6 +227,39 @@ export default function OwnerDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* KYC Status Banner */}
+      {showKycBanner && kycStatus && kycStatus !== "approved" && (
+        <div className={`relative flex items-start gap-3 px-4 py-3.5 rounded-2xl border text-sm ${
+          kycStatus === "unsubmitted" ? "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-300" :
+          kycStatus === "pending"     ? "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-300" :
+                                        "bg-red-50 border-red-200 text-red-800 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-300"
+        }`}>
+          {kycStatus === "unsubmitted" && <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />}
+          {kycStatus === "pending"     && <Clock className="h-4 w-4 shrink-0 mt-0.5" />}
+          {kycStatus === "rejected"    && <XCircle className="h-4 w-4 shrink-0 mt-0.5" />}
+          <div className="flex-1">
+            <p className="font-bold">
+              {kycStatus === "unsubmitted" && "Action Required: Upload your KYC documents"}
+              {kycStatus === "pending"     && "KYC Under Review"}
+              {kycStatus === "rejected"    && "KYC Rejected — Re-upload required"}
+            </p>
+            <p className="text-xs opacity-80 mt-0.5">
+              {kycStatus === "unsubmitted" && "Your host account won't be activated until Aadhaar and PAN documents are verified."}
+              {kycStatus === "pending"     && "Your documents are being reviewed. You'll be notified once approved (within 24 hrs)."}
+              {kycStatus === "rejected"    && "One or more documents were rejected. Please upload valid documents again."}
+            </p>
+            {(kycStatus === "unsubmitted" || kycStatus === "rejected") && (
+              <Link href="/onboarding/host" className="inline-flex items-center gap-1 text-xs font-bold mt-2 underline underline-offset-2">
+                Upload Documents <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
+          </div>
+          <button onClick={() => setShowKycBanner(false)} className="opacity-50 hover:opacity-100 transition shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center gap-4">
         <h2 className="text-xl font-extrabold text-neutral-900 dark:text-white">Host Dashboard</h2>
         <button
@@ -279,14 +428,27 @@ export default function OwnerDashboard() {
               </div>
             </div>
 
-            <div>
-              <label className="block font-bold text-neutral-500 mb-1">Image URL (Optional)</label>
-              <input
-                type="text"
-                placeholder="https://images.unsplash.com/photo..."
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                className="w-full h-10 border rounded-xl px-3 outline-none dark:bg-neutral-800 dark:border-neutral-700 focus:border-primary-500"
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <DocumentUploadZone 
+                label="Vehicle Photo" 
+                hint="Clear exterior picture" 
+                accept="image/*" 
+                state={photoState} 
+                onChange={(f) => handleUploadFile(f, setPhotoState)} 
+              />
+              <DocumentUploadZone 
+                label="RC Document" 
+                hint="Registration Certificate" 
+                accept="image/*,.pdf" 
+                state={rcState} 
+                onChange={(f) => handleUploadFile(f, setRcState)} 
+              />
+              <DocumentUploadZone 
+                label="Insurance" 
+                hint="Valid vehicle insurance" 
+                accept="image/*,.pdf" 
+                state={insuranceState} 
+                onChange={(f) => handleUploadFile(f, setInsuranceState)} 
               />
             </div>
 

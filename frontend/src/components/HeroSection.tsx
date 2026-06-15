@@ -47,7 +47,7 @@ export default function HeroSection() {
                 className={`relative w-[140px] md:w-[180px] h-[220px] md:h-[260px] rounded-[20px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.15)] ${ROTATIONS[idx]} -ml-6 md:-ml-8 first:ml-0 transition-transform duration-300 hover:z-10 hover:-translate-y-4 cursor-pointer`}
                 style={{ zIndex: HERO_IMAGES.length - Math.abs(2 - idx) }}
               >
-                <img src={src} alt="Travel lifestyle" className="w-full h-full object-cover" />
+                <img src={src} alt="Travel lifestyle" className="w-full h-full object-cover" loading={idx === 0 ? "eager" : "lazy"} />
               </div>
             ))}
           </div>
