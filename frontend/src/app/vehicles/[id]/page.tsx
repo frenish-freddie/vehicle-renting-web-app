@@ -45,6 +45,10 @@ export default function VehicleDetails() {
   const [transactionId, setTransactionId] = useState("");
   const [isPaying, setIsPaying] = useState(false);
 
+  // Booked Dates state
+  const [bookedDates, setBookedDates] = useState<{from_dt: string, to_dt: string}[]>([]);
+  const [dateError, setDateError] = useState("");
+
   useEffect(() => {
     async function loadDetails() {
       setIsLoading(true);
@@ -52,6 +56,10 @@ export default function VehicleDetails() {
       try {
         const response = await api.get(`/api/vehicles/${id}`);
         setVehicle(response.data);
+        
+        // Also load booked dates
+        const bookedResponse = await api.get(`/api/vehicles/${id}/booked-dates`);
+        setBookedDates(bookedResponse.data);
       } catch (err: any) {
         setError("Could not load vehicle details. Please make sure the backend is active.");
       } finally {
@@ -60,6 +68,20 @@ export default function VehicleDetails() {
     }
     loadDetails();
   }, [id]);
+
+  const isDateRangeBooked = (start: string, end: string) => {
+    if (!start || !end) return false;
+    const s = new Date(start).getTime();
+    // Use end of day for the selected end date to allow same day bookings if times don't conflict
+    // but here we just have dates, so end date is 00:00:00 of that day, let's treat it as the whole day
+    const e = new Date(end).getTime() + 24 * 60 * 60 * 1000 - 1; 
+    
+    return bookedDates.some(b => {
+      const bStart = new Date(b.from_dt).getTime();
+      const bEnd = new Date(b.to_dt).getTime();
+      return s < bEnd && e > bStart;
+    });
+  };
 
   // Auth Protection Check
   useEffect(() => {
@@ -121,6 +143,12 @@ export default function VehicleDetails() {
       alert("Return date cannot be before pickup date.");
       return;
     }
+
+    if (isDateRangeBooked(startDate, endDate)) {
+      setDateError("This vehicle is already booked for the selected dates.");
+      return;
+    }
+    setDateError("");
 
     const queryParams = new URLSearchParams({
       start: startDate,
@@ -298,11 +326,21 @@ export default function VehicleDetails() {
                   required
                   min={startDate || todayString}
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setDateError("");
+                  }}
                   className="w-full h-11 bg-neutral-50 border border-neutral-200/50 px-3 rounded-xl text-xs outline-none text-neutral-800 focus:border-primary-500 dark:bg-neutral-800 dark:border-neutral-700/80 dark:text-neutral-200"
                 />
               </div>
             </div>
+
+            {dateError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-600 dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-400">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span className="text-xs font-semibold">{dateError}</span>
+              </div>
+            )}
 
             {/* Optional Driver Toggle */}
             {vehicle.driver_available && (

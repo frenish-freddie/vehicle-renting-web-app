@@ -9,6 +9,7 @@ import {
   FileImage, ArrowRight, ShieldCheck, Info, Loader2
 } from "lucide-react";
 import Link from "next/link";
+import Tesseract from "tesseract.js";
 
 type KycStatus = "unsubmitted" | "pending" | "approved" | "rejected";
 
@@ -94,7 +95,10 @@ function UploadZone({
         />
 
         {state.uploading ? (
-          <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-8 w-8 text-blue-400 animate-spin mb-2" />
+            <p className="text-xs text-slate-400 font-medium">Processing...</p>
+          </div>
         ) : state.uploaded ? (
           <>
             <CheckCircle2 className="h-8 w-8 text-emerald-400" />
@@ -134,6 +138,9 @@ export default function HostOnboardingPage() {
   const [aadhaar, setAadhaar] = useState<UploadState>(initialUploadState());
   const [pan, setPan] = useState<UploadState>(initialUploadState());
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const [aadhaarDetails, setAadhaarDetails] = useState({
+    name: "", dob: "", gender: "Male", number: "", address: ""
+  });
 
   useEffect(() => {
     if (!token) { router.replace("/login"); return; }
@@ -144,7 +151,7 @@ export default function HostOnboardingPage() {
         setAadhaarUrl(r.data.host_aadhaar_url);
         setPanUrl(r.data.host_pan_url);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingStatus(false));
   }, [token, router]);
 
@@ -152,7 +159,8 @@ export default function HostOnboardingPage() {
     file: File,
     endpoint: string,
     setState: React.Dispatch<React.SetStateAction<UploadState>>,
-    onSuccess: (url: string, newStatus: KycStatus) => void
+    onSuccess: (url: string, newStatus: KycStatus) => void,
+    extraData: Record<string, string> = {}
   ) => {
     setState((s) => ({ ...s, file, uploading: true, error: null }));
     // Show local preview
@@ -163,6 +171,7 @@ export default function HostOnboardingPage() {
     }
     const form = new FormData();
     form.append("file", file);
+    Object.entries(extraData).forEach(([k, v]) => form.append(k, v));
     try {
       const res = await api.post(endpoint, form, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -244,19 +253,91 @@ export default function HostOnboardingPage() {
               ))}
             </div>
 
-            {/* Upload Zones */}
-            <UploadZone
-              label="1. Aadhaar Card / Government ID"
-              hint="Front & back of Aadhaar, Voter ID, or Passport · JPEG, PNG, PDF · Max 8MB"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              state={aadhaar}
-              onChange={(file) =>
-                uploadDoc(file, "/api/host-kyc/upload-aadhaar", setAadhaar, (url, status) => {
-                  setAadhaarUrl(url);
-                  setKycStatus(status);
-                })
-              }
-            />
+            {/* Aadhaar Upload Details */}
+            <div className="space-y-4">
+              <label className="block text-sm font-bold text-slate-200">1. Aadhaar Card / Government ID</label>
+              <p className="text-xs text-slate-400">Please provide your details exactly as they appear on your document.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input 
+                  placeholder="Full Name as on Aadhaar" 
+                  value={aadhaarDetails.name} 
+                  onChange={e => setAadhaarDetails({...aadhaarDetails, name: e.target.value})}
+                  className="h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-sm w-full" 
+                />
+                <input 
+                  type="date" 
+                  placeholder="Date of Birth" 
+                  value={aadhaarDetails.dob} 
+                  onChange={e => setAadhaarDetails({...aadhaarDetails, dob: e.target.value})}
+                  className="h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-sm w-full" 
+                />
+                <select 
+                  value={aadhaarDetails.gender} 
+                  onChange={e => setAadhaarDetails({...aadhaarDetails, gender: e.target.value})}
+                  className="h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-sm w-full text-slate-300"
+                >
+                  <option value="Male" className="bg-black">Male</option>
+                  <option value="Female" className="bg-black">Female</option>
+                  <option value="Other" className="bg-black">Other</option>
+                </select>
+                <input 
+                  placeholder="12-Digit Aadhaar Number" 
+                  value={aadhaarDetails.number} 
+                  onChange={e => setAadhaarDetails({...aadhaarDetails, number: e.target.value})}
+                  className="h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-sm w-full" 
+                />
+                <input 
+                  placeholder="Full Address including PIN Code" 
+                  value={aadhaarDetails.address} 
+                  onChange={e => setAadhaarDetails({...aadhaarDetails, address: e.target.value})}
+                  className="h-11 px-4 rounded-xl border border-white/10 bg-white/5 text-sm w-full md:col-span-2" 
+                />
+              </div>
+
+              <UploadZone
+                label="Upload Original Aadhaar Image"
+                hint="Front & back of Aadhaar, Voter ID, or Passport · JPEG, PNG, PDF · Max 8MB"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                state={aadhaar}
+                onChange={async (file) => {
+                  if (!aadhaarDetails.name || !aadhaarDetails.number) {
+                    setAadhaar(s => ({...s, error: "Please fill out Name and Aadhaar Number first."}));
+                    return;
+                  }
+
+                  if (!file.type.startsWith("application/pdf")) {
+                    setAadhaar(s => ({ ...s, uploading: true, error: null })); // Reusing uploading state for the spinner during verification
+                    try {
+                      const result = await Tesseract.recognize(file, "eng");
+                      const text = result.data.text.toLowerCase();
+                      const hasKeywords = text.includes("government of india") || text.includes("aadhaar");
+                      const hasPattern = /\d{4}\s?\d{4}\s?\d{4}/.test(text);
+
+                      if (!hasKeywords && !hasPattern) {
+                        setAadhaar(s => ({ ...s, uploading: false, error: "Invalid document detected. Please upload a clear image of a valid Aadhaar card.", file: null }));
+                        return;
+                      }
+                    } catch (err) {
+                      console.error("OCR Error:", err);
+                      setAadhaar(s => ({ ...s, uploading: false, error: "Failed to verify image. Please try another clear photo.", file: null }));
+                      return;
+                    }
+                  }
+
+                  uploadDoc(file, "/api/host-kyc/upload-aadhaar", setAadhaar, (url, status) => {
+                    setAadhaarUrl(url);
+                    setKycStatus(status);
+                  }, {
+                    aadhaar_name: aadhaarDetails.name,
+                    aadhaar_dob: aadhaarDetails.dob,
+                    aadhaar_gender: aadhaarDetails.gender,
+                    aadhaar_number: aadhaarDetails.number,
+                    aadhaar_address: aadhaarDetails.address
+                  })
+                }}
+              />
+            </div>
 
             {/* Preview of already-uploaded Aadhaar */}
             {aadhaarUrl && !aadhaar.uploaded && (

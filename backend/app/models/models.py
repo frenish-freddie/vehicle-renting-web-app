@@ -56,6 +56,13 @@ class User(Base):
     user_aadhaar_url  = Column(String, nullable=True)                  # Aadhaar URL
     user_kyc_status   = Column(String, default="unsubmitted")          # unsubmitted | pending | approved | rejected
 
+    # Aadhaar text details
+    aadhaar_name = Column(String, nullable=True)
+    aadhaar_dob = Column(String, nullable=True)
+    aadhaar_gender = Column(String, nullable=True)
+    aadhaar_number = Column(String, nullable=True)
+    aadhaar_address = Column(String, nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     vehicles = relationship("Vehicle", back_populates="owner")

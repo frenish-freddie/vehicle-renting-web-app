@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/authStore";
 import api from "@/services/api";
 import { Vehicle, DriverOption } from "@/types";
 import HeroNavbar from "@/components/HeroNavbar";
-import { CheckCircle, ArrowRight, ShieldCheck, CreditCard, Loader2, Star, Car, User as UserIcon, MapPin, Truck } from "lucide-react";
+import { CheckCircle, ArrowRight, ShieldCheck, CreditCard, Loader2, Star, Car, User as UserIcon, MapPin, Truck, AlertTriangle } from "lucide-react";
 
 export default function BookingCheckoutFlow() {
   const { id } = useParams();
@@ -17,6 +17,7 @@ export default function BookingCheckoutFlow() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [kycStatus, setKycStatus] = useState<string>("unsubmitted");
+  const [bookedDates, setBookedDates] = useState<{from_dt: string, to_dt: string}[]>([]);
 
   // URL params parsed
   const startParam = searchParams.get("start") || "";
@@ -71,6 +72,9 @@ export default function BookingCheckoutFlow() {
       try {
         const response = await api.get(`/api/vehicles/${id}`);
         setVehicle(response.data);
+        
+        const bookedResponse = await api.get(`/api/vehicles/${id}/booked-dates`);
+        setBookedDates(bookedResponse.data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -79,6 +83,17 @@ export default function BookingCheckoutFlow() {
     }
     fetchVehicle();
   }, [id]);
+
+  const isBookedOut = useMemo(() => {
+    if (!startParam || !endParam || bookedDates.length === 0) return false;
+    const s = new Date(startParam).getTime();
+    const e = new Date(endParam).getTime() + 24 * 60 * 60 * 1000 - 1;
+    return bookedDates.some(b => {
+      const bStart = new Date(b.from_dt).getTime();
+      const bEnd = new Date(b.to_dt).getTime();
+      return s < bEnd && e > bStart;
+    });
+  }, [startParam, endParam, bookedDates]);
 
   // Phase 2: fetch available drivers when trip type switches to 'with_driver'
   useEffect(() => {
@@ -321,6 +336,25 @@ export default function BookingCheckoutFlow() {
           </div>
         )}
 
+        {isBookedOut && step < 4 && (
+          <div className="mb-8 bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 bg-red-500/20 rounded-xl flex items-center justify-center text-red-500">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-red-600 dark:text-red-400">Dates Unavailable</h3>
+                <p className="text-xs text-red-600/70 dark:text-red-400/70">
+                  We're sorry, but this vehicle was just booked by someone else for your selected dates. Please go back and choose different dates or a different vehicle.
+                </p>
+              </div>
+            </div>
+            <button onClick={() => router.back()} className="px-4 py-2 bg-red-500 text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-red-600">
+              Go Back
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
           {/* Main Flow Area */}
@@ -527,7 +561,7 @@ export default function BookingCheckoutFlow() {
 
                 <button
                   onClick={() => setStep(2)}
-                  disabled={(tripType === "with_driver" && !selectedDriver) || (pickupType === "host_delivery" && (!userDeliveryAddress || pricing.isOutOfDeliveryRange))}
+                  disabled={isBookedOut || (tripType === "with_driver" && !selectedDriver) || (pickupType === "host_delivery" && (!userDeliveryAddress || pricing.isOutOfDeliveryRange))}
                   className="mt-4 bg-primary-dark text-white h-12 px-8 rounded-input font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 hover:bg-black w-full md:w-auto ml-auto disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Next Step <ArrowRight className="w-4 h-4" />
@@ -662,10 +696,12 @@ export default function BookingCheckoutFlow() {
                 <div className="flex justify-between w-full mt-8">
                   <button onClick={() => setStep(2)} className="border border-border text-text-muted h-12 px-8 rounded-input font-bold uppercase tracking-wider text-sm hover:bg-surface">Back</button>
                   <div className="flex flex-col items-end gap-1.5">
-                    <button onClick={handlePayment} disabled={isPaying || kycStatus !== "approved"} className="bg-accent-green text-white h-12 px-8 rounded-input font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 hover:bg-[#10a310] disabled:opacity-50 disabled:cursor-not-allowed">
+                    <button onClick={handlePayment} disabled={isPaying || kycStatus !== "approved" || isBookedOut} className="bg-accent-green text-white h-12 px-8 rounded-input font-bold uppercase tracking-wider text-sm flex items-center justify-center gap-2 hover:bg-[#10a310] disabled:opacity-50 disabled:cursor-not-allowed">
                       {isPaying ? <Loader2 className="w-5 h-5 animate-spin" /> : (paymentMethod === "upi" ? `I Have Paid ₹${pricing.partial} →` : `Pay ₹${pricing.partial} Now →`)}
                     </button>
-                    {kycStatus !== "approved" ? (
+                    {isBookedOut ? (
+                      <p className="text-[11px] font-bold text-red-500">Booking disabled. Dates are no longer available.</p>
+                    ) : kycStatus !== "approved" ? (
                       <p className="text-[11px] font-bold text-red-500">Booking disabled until KYC is approved.</p>
                     ) : (
                       <p className="text-[11px] text-text-muted">Remaining ₹{pricing.remaining} is collected after your trip ends.</p>

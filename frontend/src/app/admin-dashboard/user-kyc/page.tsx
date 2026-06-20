@@ -33,7 +33,7 @@ export default function AdminUserKycPage() {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<{url: string, user: AdminUserKyc, type: 'dl' | 'aadhaar'} | null>(null);
   const LIMIT = 15;
 
   const fetchUsers = useCallback(() => {
@@ -79,24 +79,69 @@ export default function AdminUserKycPage() {
   return (
     <div className="space-y-5">
       {/* Document Preview Modal */}
-      {previewUrl && (
+      {previewData && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
-          onClick={() => setPreviewUrl(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4 overflow-y-auto py-10"
+          onClick={() => setPreviewData(null)}
         >
-          <div className="max-w-2xl w-full bg-slate-900 border border-white/10 rounded-2xl p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-sm font-bold text-white">Document Preview</p>
-              <button onClick={() => setPreviewUrl(null)} className="text-slate-400 hover:text-white transition text-xl leading-none">&times;</button>
+          <div className="max-w-4xl w-full bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col md:flex-row gap-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex-1 flex flex-col">
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-sm font-bold text-white">Document Preview ({previewData.type.toUpperCase()})</p>
+                <button onClick={() => setPreviewData(null)} className="text-slate-400 hover:text-white transition text-xl leading-none md:hidden">&times;</button>
+              </div>
+              <div className="bg-black/50 rounded-xl overflow-hidden flex-1 flex items-center justify-center min-h-[300px]">
+                {previewData.url.endsWith(".pdf") ? (
+                  <iframe src={previewData.url} className="w-full h-[500px]" />
+                ) : (
+                  <img src={previewData.url} alt="doc" className="w-full max-h-[600px] object-contain" />
+                )}
+              </div>
+              <a href={previewData.url} target="_blank" rel="noreferrer" className="mt-3 flex items-center gap-2 text-xs text-blue-400 hover:underline">
+                <ExternalLink className="h-3.5 w-3.5" /> Open full size in new tab
+              </a>
             </div>
-            {previewUrl.endsWith(".pdf") ? (
-              <iframe src={previewUrl} className="w-full h-[500px] rounded-xl" />
-            ) : (
-              <img src={previewUrl} alt="doc" className="w-full max-h-[500px] object-contain rounded-xl" />
+
+            {previewData.type === 'aadhaar' && previewData.user.aadhaar_name && (
+              <div className="w-full md:w-80 shrink-0 bg-slate-800 rounded-xl p-5 border border-white/5 h-fit">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-white flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-400" /> Aadhaar Text Details
+                  </h3>
+                  <button onClick={() => setPreviewData(null)} className="text-slate-400 hover:text-white transition text-xl leading-none hidden md:block">&times;</button>
+                </div>
+                <p className="text-xs text-slate-400 mb-6">Cross-check these user-provided details against the original document image on the left.</p>
+                
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <p className="text-slate-500 text-xs">Full Name</p>
+                    <p className="font-medium text-white">{previewData.user.aadhaar_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Date of Birth</p>
+                    <p className="font-medium text-white">{previewData.user.aadhaar_dob}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Gender</p>
+                    <p className="font-medium text-white">{previewData.user.aadhaar_gender}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">12-Digit Number</p>
+                    <p className="font-mono text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded inline-block mt-1">{previewData.user.aadhaar_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500 text-xs">Full Address</p>
+                    <p className="font-medium text-white break-words">{previewData.user.aadhaar_address}</p>
+                  </div>
+                </div>
+              </div>
             )}
-            <a href={previewUrl} target="_blank" rel="noreferrer" className="mt-3 flex items-center gap-2 text-xs text-blue-400 hover:underline">
-              <ExternalLink className="h-3.5 w-3.5" /> Open in new tab
-            </a>
+            
+            {previewData.type === 'dl' && (
+              <div className="hidden md:block">
+                <button onClick={() => setPreviewData(null)} className="text-slate-400 hover:text-white transition text-2xl leading-none ml-4">&times;</button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -206,7 +251,7 @@ export default function AdminUserKycPage() {
                     <td className="px-4 py-4 hidden md:table-cell">
                       <div className="flex flex-col gap-2">
                         {u.user_dl_url ? (
-                          <button onClick={() => setPreviewUrl(`${API_BASE}${u.user_dl_url}`)} className="flex items-center gap-2 text-[11px] font-bold text-slate-300 hover:text-white transition group">
+                          <button onClick={() => setPreviewData({url: `${API_BASE}${u.user_dl_url}`, user: u, type: 'dl'})} className="flex items-center gap-2 text-[11px] font-bold text-slate-300 hover:text-white transition group">
                             <div className="h-6 w-6 rounded bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition"><FileImage className="h-3.5 w-3.5 text-blue-400" /></div>
                             View DL
                           </button>
@@ -214,7 +259,7 @@ export default function AdminUserKycPage() {
                           <span className="flex items-center gap-2 text-[11px] text-slate-600"><div className="h-6 w-6 rounded bg-slate-800/50 flex items-center justify-center"><AlertCircle className="h-3 w-3" /></div>No DL</span>
                         )}
                         {u.user_aadhaar_url ? (
-                          <button onClick={() => setPreviewUrl(`${API_BASE}${u.user_aadhaar_url}`)} className="flex items-center gap-2 text-[11px] font-bold text-slate-300 hover:text-white transition group">
+                          <button onClick={() => setPreviewData({url: `${API_BASE}${u.user_aadhaar_url}`, user: u, type: 'aadhaar'})} className="flex items-center gap-2 text-[11px] font-bold text-slate-300 hover:text-white transition group">
                             <div className="h-6 w-6 rounded bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition"><FileImage className="h-3.5 w-3.5 text-purple-400" /></div>
                             View Aadhaar
                           </button>

@@ -113,6 +113,11 @@ export interface AdminHostKyc {
   host_aadhaar_url: string | null;
   host_pan_url: string | null;
   is_host_approved: boolean;
+  aadhaar_name: string | null;
+  aadhaar_dob: string | null;
+  aadhaar_gender: string | null;
+  aadhaar_number: string | null;
+  aadhaar_address: string | null;
   created_at: string | null;
 }
 
@@ -126,6 +131,11 @@ export interface AdminUserKyc {
   user_kyc_status: string;
   dl_verified: boolean;
   aadhaar_verified: boolean;
+  aadhaar_name: string | null;
+  aadhaar_dob: string | null;
+  aadhaar_gender: string | null;
+  aadhaar_number: string | null;
+  aadhaar_address: string | null;
   created_at: string | null;
 }
 

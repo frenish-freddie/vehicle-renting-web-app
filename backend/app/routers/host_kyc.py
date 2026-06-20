@@ -10,7 +10,7 @@ import os
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
@@ -78,6 +78,11 @@ def get_kyc_status(
 @router.post("/upload-aadhaar", status_code=status.HTTP_200_OK)
 async def upload_aadhaar(
     file: UploadFile = File(...),
+    aadhaar_name: str = Form(""),
+    aadhaar_dob: str = Form(""),
+    aadhaar_gender: str = Form(""),
+    aadhaar_number: str = Form(""),
+    aadhaar_address: str = Form(""),
     current_user: User = Depends(RoleChecker(["host", "admin"])),
     db: Session = Depends(get_db),
 ):
@@ -93,6 +98,14 @@ async def upload_aadhaar(
     url = _save_upload(file, contents, f"aadhaar_{user.id}")
 
     user.host_aadhaar_url = url
+    
+    # Save text details
+    user.aadhaar_name = aadhaar_name
+    user.aadhaar_dob = aadhaar_dob
+    user.aadhaar_gender = aadhaar_gender
+    user.aadhaar_number = aadhaar_number
+    user.aadhaar_address = aadhaar_address
+
     # Move to pending only when at least one doc is uploaded
     if user.host_kyc_status in ("unsubmitted", "rejected"):
         user.host_kyc_status = "pending"

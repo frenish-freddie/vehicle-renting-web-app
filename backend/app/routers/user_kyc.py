@@ -10,7 +10,7 @@ import os
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
@@ -112,6 +112,11 @@ async def upload_dl(
 @router.post("/upload-aadhaar", status_code=status.HTTP_200_OK)
 async def upload_aadhaar(
     file: UploadFile = File(...),
+    aadhaar_name: str = Form(""),
+    aadhaar_dob: str = Form(""),
+    aadhaar_gender: str = Form(""),
+    aadhaar_number: str = Form(""),
+    aadhaar_address: str = Form(""),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -127,6 +132,13 @@ async def upload_aadhaar(
     url = _save_upload(file, contents, f"aadhaar_{user.id}")
 
     user.user_aadhaar_url = url
+    # Save the text details
+    user.aadhaar_name = aadhaar_name
+    user.aadhaar_dob = aadhaar_dob
+    user.aadhaar_gender = aadhaar_gender
+    user.aadhaar_number = aadhaar_number
+    user.aadhaar_address = aadhaar_address
+
     if user.user_kyc_status in ("unsubmitted", "rejected"):
         user.user_kyc_status = "pending"
     db.commit()

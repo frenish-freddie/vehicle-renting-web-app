@@ -5,11 +5,13 @@ import os
 import uuid
 from pathlib import Path
 from app.database.connection import get_db
-from app.models.models import Vehicle, User, RoleEnum, Location
+from app.models.models import Vehicle, User, RoleEnum, Location, Booking
 from app.schemas.schemas import VehicleCreate, VehicleUpdate, VehicleResponse, DeliveryOptionsResponse
 from app.auth.jwt import get_current_user, RoleChecker
 
 router = APIRouter(prefix="/api/vehicles", tags=["Vehicles"])
+
+from datetime import datetime
 
 # Public: Browse and search/filter vehicles
 @router.get("", response_model=List[VehicleResponse])
@@ -21,6 +23,8 @@ def browse_vehicles(
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     search: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(Vehicle)
@@ -42,6 +46,17 @@ def browse_vehicles(
             (Vehicle.sub_type.ilike(f"%{search}%"))
         )
         
+    if start_date and end_date:
+        # Find all vehicles that are booked in this date range
+        overlapping_bookings = db.query(Booking.vehicle_id).filter(
+            Booking.status.in_(["pending", "confirmed", "ongoing"]),
+            Booking.from_dt < end_date,
+            Booking.to_dt > start_date
+        ).subquery()
+        
+        # Exclude those vehicles from the search results
+        query = query.filter(~Vehicle.id.in_(overlapping_bookings))
+        
     return query.all()
 
 @router.get("/featured", response_model=List[VehicleResponse])
@@ -56,6 +71,23 @@ def get_vehicle_details(id: int, db: Session = Depends(get_db)):
     if not vehicle:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
     return vehicle
+
+@router.get("/{id}/booked-dates")
+def get_booked_dates(id: int, db: Session = Depends(get_db)):
+    """Returns an array of date ranges where the vehicle is already booked."""
+    bookings = db.query(Booking).filter(
+        Booking.vehicle_id == id,
+        Booking.status.in_(["pending", "confirmed", "ongoing"])
+    ).all()
+    
+    booked_dates = []
+    for b in bookings:
+        booked_dates.append({
+            "from_dt": b.from_dt.isoformat(),
+            "to_dt": b.to_dt.isoformat()
+        })
+        
+    return booked_dates
 
 
 # Phase 3: Delivery options for a specific vehicle

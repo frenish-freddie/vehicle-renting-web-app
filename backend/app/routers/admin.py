@@ -166,6 +166,11 @@ def list_user_kyc(
                 "user_kyc_status": u.user_kyc_status,
                 "dl_verified": u.dl_verified,
                 "aadhaar_verified": u.aadhaar_verified,
+                "aadhaar_name": u.aadhaar_name,
+                "aadhaar_dob": u.aadhaar_dob,
+                "aadhaar_gender": u.aadhaar_gender,
+                "aadhaar_number": u.aadhaar_number,
+                "aadhaar_address": u.aadhaar_address,
                 "created_at": u.created_at.isoformat() if u.created_at else None,
             }
             for u in users
@@ -510,6 +515,11 @@ def list_host_kyc(
                 "host_aadhaar_url": u.host_aadhaar_url,
                 "host_pan_url": u.host_pan_url,
                 "is_host_approved": u.is_host_approved,
+                "aadhaar_name": u.aadhaar_name,
+                "aadhaar_dob": u.aadhaar_dob,
+                "aadhaar_gender": u.aadhaar_gender,
+                "aadhaar_number": u.aadhaar_number,
+                "aadhaar_address": u.aadhaar_address,
                 "created_at": u.created_at.isoformat() if u.created_at else None,
             }
             for u in users
