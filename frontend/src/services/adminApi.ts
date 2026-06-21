@@ -232,8 +232,8 @@ export const adminApi = {
       .then((r) => r.data as { total: number; users: AdminUserKyc[] }),
 
   approveHostKyc: (userId: number) =>
-    api.patch(`/api/admin/users/${userId}/approve-kyc`).then((r) => r.data),
+    api.patch(`/api/admin/hosts/${userId}/approve-kyc`).then((r) => r.data),
 
   rejectHostKyc: (userId: number) =>
-    api.patch(`/api/admin/users/${userId}/reject-kyc`).then((r) => r.data),
+    api.patch(`/api/admin/hosts/${userId}/reject-kyc`).then((r) => r.data),
 };

@@ -98,6 +98,7 @@ class VehicleBase(BaseModel):
     color: Optional[str] = None
     images: str
     features: Optional[str] = None
+    description: Optional[str] = None
     specs: Optional[str] = None
     is_available: bool = True
     is_driver_available: bool = False

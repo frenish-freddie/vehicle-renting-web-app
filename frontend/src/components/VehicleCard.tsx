@@ -15,13 +15,21 @@ const CATEGORY_LABELS: { [key: string]: string } = {
   special: "Special",
 };
 
+const BACKEND = "http://127.0.0.1:8000";
+const toAbsUrl = (url: string | null | undefined) => {
+  if (!url) return "/vehicles/placeholder.jpg";
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/static/")) return `${BACKEND}${url}`;
+  return url;
+};
+
 export default function VehicleCard({ vehicle, isOwnVehicle = false }: VehicleCardProps) {
   return (
     <div className="group flex flex-col overflow-hidden bg-white border border-border rounded-card shadow-sm hover:shadow-card transition-all">
       {/* Vehicle Image Container */}
       <div className="relative h-48 w-full overflow-hidden bg-neutral-100">
         <img
-          src={vehicle.images ? (vehicle.images.startsWith('http') ? vehicle.images : (vehicle.images.startsWith('/static/') ? `http://localhost:8000${vehicle.images}` : vehicle.images)) : "/vehicles/placeholder.jpg"}
+          src={toAbsUrl(vehicle.images?.split(',')[0])}
           alt={`${vehicle.brand} ${vehicle.model}`}
           className="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
@@ -44,7 +52,7 @@ export default function VehicleCard({ vehicle, isOwnVehicle = false }: VehicleCa
         )}
         {/* Category Label */}
         <div className="absolute top-2 right-2 bg-primary-dark/80 text-white backdrop-blur-sm px-2 py-1 rounded badge text-[9px] font-bold uppercase tracking-wider z-10 shadow-sm">
-          {CATEGORY_LABELS[vehicle.vehicle_category] || vehicle.vehicle_category}
+          {CATEGORY_LABELS[vehicle.category || vehicle.vehicle_category as string] || vehicle.category || vehicle.vehicle_category}
         </div>
         {vehicle.driver_available && (
           <div className="absolute bottom-2 left-2 bg-driver-gold/90 backdrop-blur-sm text-primary-dark px-2 py-1 rounded badge text-[9px] font-bold uppercase tracking-wider z-10 shadow-sm">
@@ -63,9 +71,9 @@ export default function VehicleCard({ vehicle, isOwnVehicle = false }: VehicleCa
         {/* Specifications Badges */}
         <div className="flex flex-wrap items-center gap-1 mt-2 text-[10px] font-bold text-text-muted">
           <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.fuel_type}</span>
-          <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.driver_available ? "With Operator" : "Self Drive"}</span>
-          {vehicle.seating_capacity && <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.seating_capacity} Seats</span>}
-          {vehicle.load_capacity > 0 && <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.load_capacity}T Payload</span>}
+          <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.is_driver_available || vehicle.driver_available ? "With Operator" : "Self Drive"}</span>
+          {(vehicle.seats || vehicle.seating_capacity) && <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.seats || vehicle.seating_capacity} Seats</span>}
+          {(vehicle.payload_capacity || vehicle.load_capacity) > 0 && <span className="bg-surface border border-border px-1.5 py-0.5 rounded">{vehicle.payload_capacity || vehicle.load_capacity}T Payload</span>}
         </div>
 
         {/* Pricing and Button */}
@@ -73,7 +81,7 @@ export default function VehicleCard({ vehicle, isOwnVehicle = false }: VehicleCa
           <div>
             <div className="flex items-baseline gap-1">
               <span className="font-numbers text-xl font-bold text-primary-dark">
-                ₹{vehicle.base_price}
+                ₹{vehicle.price_daily || vehicle.base_price}
               </span>
               <span className="text-xs text-text-muted font-normal">
                 /day

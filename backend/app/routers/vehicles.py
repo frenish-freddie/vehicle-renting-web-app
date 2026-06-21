@@ -29,6 +29,9 @@ def browse_vehicles(
 ):
     query = db.query(Vehicle)
     
+    # Only show admin-approved vehicles to the public
+    query = query.filter(Vehicle.is_approved == True)
+    
     if category:
         query = query.filter(Vehicle.category == category)
     if fuel_type:
@@ -61,8 +64,8 @@ def browse_vehicles(
 
 @router.get("/featured", response_model=List[VehicleResponse])
 def get_featured_vehicles(city: Optional[str] = "Thrissur", db: Session = Depends(get_db)):
-    # Mock featured vehicles
-    query = db.query(Vehicle).limit(9)
+    # Only show admin-approved, available vehicles on the homepage
+    query = db.query(Vehicle).filter(Vehicle.is_approved == True, Vehicle.is_available == True).limit(9)
     return query.all()
 
 @router.get("/{id}", response_model=VehicleResponse)
@@ -70,6 +73,8 @@ def get_vehicle_details(id: int, db: Session = Depends(get_db)):
     vehicle = db.query(Vehicle).filter(Vehicle.id == id).first()
     if not vehicle:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
+    if not vehicle.is_approved:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This vehicle is pending admin approval and is not yet available.")
     return vehicle
 
 @router.get("/{id}/booked-dates")
@@ -128,19 +133,30 @@ async def upload_vehicle_doc(
     file: UploadFile = File(...),
     current_user: User = Depends(RoleChecker([RoleEnum.host, RoleEnum.admin]))
 ):
+    # Validate file type — only images and PDFs allowed
+    ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp", "pdf"}
+    ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "application/pdf"}
+
+    ext = (file.filename or "").rsplit(".", 1)[-1].lower()
+    if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type '{file.content_type}'. Only JPG, PNG, WEBP images and PDF documents are accepted."
+        )
+
     try:
-        # Create unique filename
-        ext = file.filename.split('.')[-1]
-        new_filename = f"{uuid.uuid4().hex}.{ext}"
-        
-        static_dir = Path("static/vehicle_docs")
+        # __file__ = backend/app/routers/vehicles.py → .parent = routers/ → .parent = app/
+        static_dir = Path(__file__).resolve().parent.parent / "static" / "vehicle_docs"
         static_dir.mkdir(parents=True, exist_ok=True)
+
+        new_filename = f"{uuid.uuid4().hex}.{ext}"
         file_path = static_dir / new_filename
 
         contents = await file.read()
         with open(file_path, "wb") as f:
             f.write(contents)
 
+        # Return the relative path (served via /static mount)
         return {"url": f"/static/vehicle_docs/{new_filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload document: {str(e)}")
@@ -154,6 +170,7 @@ def create_vehicle(
 ):
     new_vehicle = Vehicle(
         host_id=current_user.id,
+        is_approved=False,
         **vehicle_in.model_dump()
     )
     db.add(new_vehicle)

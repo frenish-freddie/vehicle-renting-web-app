@@ -148,6 +148,7 @@ def get_owner_stats(
             "registration_number": v.registration_no,
             "base_price": v.price_daily,
             "images": v.images,
+            "is_approved": v.is_approved,
             "total_earned": float(earned),
             "total_trips": trips,
             "current_status": current_status

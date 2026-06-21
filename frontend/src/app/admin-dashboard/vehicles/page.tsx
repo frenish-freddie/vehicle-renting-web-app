@@ -16,7 +16,13 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "http://127.0.0.1:8000";
+
+const toDocUrl = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  if (url.startsWith("http")) return url;
+  return `${API_BASE}${url}`;
+};
 
 const CATEGORY_COLORS: Record<string, string> = {
   car:         "bg-blue-400/10 text-blue-400 border-blue-400/20",
@@ -256,17 +262,17 @@ export default function AdminVehicles() {
                       <div className="flex flex-col gap-1.5">
                         {v.rc_url ? (
                           <button
-                            onClick={() => setPreviewUrl(`${API_BASE}${v.rc_url}`)}
+                            onClick={() => setPreviewUrl(toDocUrl(v.rc_url))}
                             className="text-[9px] font-bold px-2 py-1 rounded border uppercase text-emerald-400 border-emerald-400/20 bg-emerald-400/5 hover:bg-emerald-400/10 transition flex items-center gap-1 w-max"
                           >
-                            <FileImage className="w-2.5 h-2.5" /> RC
+                            <FileImage className="w-2.5 h-2.5" /> View RC
                           </button>
                         ) : (
-                          <span className="text-[9px] font-bold px-2 py-1 rounded border uppercase text-slate-600 border-slate-700 bg-slate-800 w-max">No RC</span>
+                          <span className="text-[9px] font-bold px-2 py-1 rounded border uppercase text-red-400 border-red-400/20 bg-red-400/5 w-max">No RC ⚠</span>
                         )}
                         {v.insurance_url ? (
                           <button
-                            onClick={() => setPreviewUrl(`${API_BASE}${v.insurance_url}`)}
+                            onClick={() => setPreviewUrl(toDocUrl(v.insurance_url))}
                             className="text-[9px] font-bold px-2 py-1 rounded border uppercase text-blue-400 border-blue-400/20 bg-blue-400/5 hover:bg-blue-400/10 transition flex items-center gap-1 w-max"
                           >
                             <FileImage className="w-2.5 h-2.5" /> Insur

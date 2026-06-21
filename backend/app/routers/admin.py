@@ -527,7 +527,7 @@ def list_host_kyc(
     }
 
 
-@router.patch("/users/{user_id}/approve-kyc")
+@router.patch("/hosts/{user_id}/approve-kyc")
 def approve_host_kyc(
     user_id: int,
     current_user: User = Depends(RoleChecker(["admin"])),
@@ -542,7 +542,7 @@ def approve_host_kyc(
     return {"message": f"Host {user.name} KYC approved.", "host_kyc_status": "approved"}
 
 
-@router.patch("/users/{user_id}/reject-kyc")
+@router.patch("/hosts/{user_id}/reject-kyc")
 def reject_host_kyc(
     user_id: int,
     current_user: User = Depends(RoleChecker(["admin"])),

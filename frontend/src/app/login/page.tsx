@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/services/api";
 import { Mail, Lock, ShieldAlert, Sparkles, Loader2 } from "lucide-react";
 
-export default function Login() {
+// Inner component that uses useSearchParams — must be inside <Suspense>
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const loginStore = useAuthStore();
@@ -300,5 +301,18 @@ export default function Login() {
         </div>
       )}
     </div>
+  );
+}
+
+// Outer page component wraps the inner component in Suspense
+export default function Login() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[calc(100vh-64px)] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

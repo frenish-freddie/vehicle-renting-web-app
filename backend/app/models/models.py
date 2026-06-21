@@ -87,6 +87,7 @@ class Vehicle(Base):
     color = Column(String, nullable=True)
     images = Column(String) # JSON or comma separated URLs
     features = Column(String, nullable=True) # JSON
+    description = Column(Text, nullable=True)
     specs = Column(String, nullable=True) # JSON for specific machinery specs
     
     is_available = Column(Boolean, default=True)
@@ -115,7 +116,7 @@ class Vehicle(Base):
     
     rating_avg = Column(Float, default=0.0)
     total_bookings = Column(Integer, default=0)
-    is_approved = Column(Boolean, default=True)
+    is_approved = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     owner = relationship("User", back_populates="vehicles")

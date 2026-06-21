@@ -134,9 +134,7 @@ export default function HostOnboardingPage() {
   const { token, user } = useAuthStore();
   const [kycStatus, setKycStatus] = useState<KycStatus>("unsubmitted");
   const [aadhaarUrl, setAadhaarUrl] = useState<string | null>(null);
-  const [panUrl, setPanUrl] = useState<string | null>(null);
   const [aadhaar, setAadhaar] = useState<UploadState>(initialUploadState());
-  const [pan, setPan] = useState<UploadState>(initialUploadState());
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [aadhaarDetails, setAadhaarDetails] = useState({
     name: "", dob: "", gender: "Male", number: "", address: ""
@@ -149,7 +147,6 @@ export default function HostOnboardingPage() {
       .then((r) => {
         setKycStatus(r.data.host_kyc_status);
         setAadhaarUrl(r.data.host_aadhaar_url);
-        setPanUrl(r.data.host_pan_url);
       })
       .catch(() => { })
       .finally(() => setLoadingStatus(false));
@@ -205,7 +202,7 @@ export default function HostOnboardingPage() {
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight">Host Verification</h1>
           <p className="text-slate-400 text-sm max-w-md mx-auto">
-            Upload your Aadhaar and PAN card so our team can verify your identity.
+            Upload your Aadhaar card so our team can verify your identity.
             Your listing will go live within 24 hours of approval.
           </p>
         </div>
@@ -216,8 +213,8 @@ export default function HostOnboardingPage() {
           <div>
             <p className={`font-bold text-sm ${cfg.color}`}>{cfg.label}</p>
             <p className="text-xs text-slate-400 mt-0.5">
-              {kycStatus === "unsubmitted" && "Please upload both documents below to activate your host account."}
-              {kycStatus === "pending" && "Your documents are under review. You'll be notified within 24 hours."}
+              {kycStatus === "unsubmitted" && "Please upload your document below to activate your host account."}
+              {kycStatus === "pending" && "Your document is under review. You'll be notified within 24 hours."}
               {kycStatus === "approved" && "Your KYC is approved! You can now list vehicles on FlexiRide."}
               {kycStatus === "rejected" && "Your KYC was rejected. Please re-upload valid documents."}
             </p>
@@ -240,15 +237,14 @@ export default function HostOnboardingPage() {
             <div className="flex items-center gap-3">
               {[
                 { num: 1, label: "Aadhaar / Govt ID", done: !!(aadhaarUrl || aadhaar.uploaded) },
-                { num: 2, label: "PAN Card", done: !!(panUrl || pan.uploaded) },
-                { num: 3, label: "Admin Review", done: false },
+                { num: 2, label: "Admin Review", done: false },
               ].map((step, i) => (
                 <div key={step.num} className="flex items-center gap-2 flex-1">
                   <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-extrabold shrink-0 ${step.done ? "bg-emerald-500 text-white" : "bg-white/10 text-slate-400"}`}>
                     {step.done ? <CheckCircle2 className="h-4 w-4" /> : step.num}
                   </div>
                   <span className="text-xs font-semibold text-slate-400 hidden sm:block">{step.label}</span>
-                  {i < 2 && <div className="flex-1 h-px bg-white/10 hidden sm:block" />}
+                  {i < 1 && <div className="flex-1 h-px bg-white/10 hidden sm:block" />}
                 </div>
               ))}
             </div>
@@ -348,46 +344,6 @@ export default function HostOnboardingPage() {
               </div>
             )}
 
-            <UploadZone
-              label="2. PAN Card"
-              hint="Clear photo or scanned copy of your PAN card · JPEG, PNG, PDF · Max 8MB"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              state={pan}
-              onChange={async (file) => {
-                if (!file.type.startsWith("application/pdf")) {
-                  setPan(s => ({ ...s, uploading: true, error: null }));
-                  try {
-                    const result = await Tesseract.recognize(file, "eng");
-                    const text = result.data.text.toLowerCase();
-                    const hasKeywords = text.includes("income tax") || text.includes("permanent account number") || text.includes("govt. of india");
-                    const hasPattern = /[a-z]{5}\d{4}[a-z]{1}/.test(text);
-
-                    if (!hasKeywords && !hasPattern) {
-                      setPan(s => ({ ...s, uploading: false, error: "Invalid document detected. Please upload a clear image of a valid PAN card.", file: null }));
-                      return;
-                    }
-                  } catch (err) {
-                    console.error("OCR Error:", err);
-                    setPan(s => ({ ...s, uploading: false, error: "Failed to verify image. Please try another clear photo.", file: null }));
-                    return;
-                  }
-                }
-                uploadDoc(file, "/api/host-kyc/upload-pan", setPan, (url, status) => {
-                  setPanUrl(url);
-                  setKycStatus(status);
-                });
-              }}
-            />
-
-            {/* Preview of already-uploaded PAN */}
-            {panUrl && !pan.uploaded && (
-              <div className="flex items-center gap-2 text-xs text-emerald-400 -mt-4">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                <span>PAN already uploaded. </span>
-                <a href={`http://localhost:8000${panUrl}`} target="_blank" rel="noreferrer" className="underline">View</a>
-              </div>
-            )}
-
             {/* Info note */}
             <div className="flex items-start gap-2 text-xs text-slate-500">
               <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-600" />
@@ -395,7 +351,7 @@ export default function HostOnboardingPage() {
             </div>
 
             {/* CTA */}
-            {(kycStatus === "pending" || ((aadhaarUrl || aadhaar.uploaded) && (panUrl || pan.uploaded))) && (
+            {(kycStatus === "pending" || (aadhaarUrl || aadhaar.uploaded)) && (
               <div className="pt-2">
                 <Link
                   href="/dashboard/host"

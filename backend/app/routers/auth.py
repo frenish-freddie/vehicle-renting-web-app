@@ -33,6 +33,15 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
             detail="A user with this email is already registered."
         )
 
+    # Check if phone number already exists
+    if user_in.phone:
+        existing_phone = db.query(User).filter(User.phone == user_in.phone).first()
+        if existing_phone:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this phone number is already registered."
+            )
+
     # Hash the password
     hashed_pw = get_password_hash(user_in.password)
 
