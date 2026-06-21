@@ -175,11 +175,18 @@ def get_driver_stats(
             detail="Driver profile registration record was not found"
         )
 
-    # Let's count trips
-    # For a prototype, we count confirmed/completed bookings where driver_included = True
+    # Trips explicitly assigned to this driver
     assigned_trips = db.query(Booking).filter(
         Booking.trip_type.in_(["with_driver", "operator"]),
-        Booking.status.in_(["confirmed", "ongoing"])
+        Booking.status.in_(["confirmed", "ongoing"]),
+        Booking.driver_id == driver_profile.id
+    ).all()
+
+    # Trips open for any driver to claim
+    available_requests = db.query(Booking).filter(
+        Booking.trip_type.in_(["with_driver", "operator"]),
+        Booking.status.in_(["confirmed"]),
+        Booking.driver_id == None
     ).all()
 
     total_trips = len(assigned_trips)
@@ -188,6 +195,10 @@ def get_driver_stats(
     driver_earnings = sum([round(t.total_amount * 0.15, 2) for t in assigned_trips])  # 15% booking cut goes to driver
 
     for t in assigned_trips:
+        t.vehicle = db.query(Vehicle).filter(Vehicle.id == t.vehicle_id).first()
+        t.user = db.query(User).filter(User.id == t.user_id).first()
+
+    for t in available_requests:
         t.vehicle = db.query(Vehicle).filter(Vehicle.id == t.vehicle_id).first()
         t.user = db.query(User).filter(User.id == t.user_id).first()
 
@@ -200,7 +211,8 @@ def get_driver_stats(
         "license_url": driver_profile.license_url,
         "total_trips": total_trips,
         "earnings": round(driver_earnings, 2),
-        "assigned_trips": assigned_trips
+        "assigned_trips": assigned_trips,
+        "available_requests": available_requests
     }
 
 @router.get("/admin")

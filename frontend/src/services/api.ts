@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // Standard local FastAPI backend URL
-const API_URL = "http://localhost:8000";
+const API_URL = "http://127.0.0.1:8000";
 
 const mapBackendVehicleToFrontend = (v: any) => {
   if (!v || typeof v !== "object") return v;
@@ -160,6 +160,16 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    if (error.response?.status === 401) {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("flexiride_token");
+        // Only redirect if not already on an auth page to prevent redirect loops
+        if (!window.location.pathname.startsWith('/auth')) {
+          window.location.href = "/auth";
+        }
+      }
+    }
+
     if (error.response?.data?.detail) {
       const detail = error.response.data.detail;
       if (Array.isArray(detail)) {

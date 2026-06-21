@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
 
 from app.database.connection import get_db
-from app.models.models import Driver, User
+from app.models.models import Driver, User, Booking, TripStatusLog
 from app.auth.jwt import RoleChecker, get_current_user
 
 router = APIRouter(prefix="/api/drivers", tags=["Driver Verification"])
@@ -209,3 +209,58 @@ def list_available_drivers(
         }
         for d in drivers
     ]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DRIVER — accept an open trip request
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/trips/{booking_id}/accept")
+def accept_trip(
+    booking_id: int,
+    current_user: User = Depends(RoleChecker(["driver"])),
+    db: Session = Depends(get_db)
+):
+    """
+    Allows a driver to accept an open booking request that requires a driver.
+    """
+    profile = db.query(Driver).filter(Driver.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Driver profile not found.")
+    
+    if profile.verification_status != "approved":
+        raise HTTPException(status_code=403, detail="You must be approved to accept trips.")
+
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found.")
+
+    if booking.trip_type not in ["with_driver", "operator"]:
+        raise HTTPException(status_code=400, detail="This trip does not require a driver.")
+
+    if booking.driver_id is not None:
+        if booking.driver_id == profile.id:
+            raise HTTPException(status_code=400, detail="You have already accepted this trip.")
+        raise HTTPException(status_code=400, detail="This trip has already been assigned to another driver.")
+
+    # Assign driver to booking and update status
+    booking.driver_id = profile.id
+    # We leave status as 'confirmed' and update current_status to 'driver_pickup' to kick off active trip logic
+    booking.current_status = "driver_pickup"
+
+    # Log the status change
+    new_log = TripStatusLog(
+        booking_id=booking.id,
+        status="driver_pickup",
+        updated_by_role="driver",
+        updated_by_id=current_user.id,
+        note="Trip accepted by driver"
+    )
+    db.add(new_log)
+    db.commit()
+
+    return {
+        "message": "Trip successfully accepted.",
+        "booking_id": booking.id,
+        "driver_id": profile.id,
+        "current_status": "driver_pickup"
+    }

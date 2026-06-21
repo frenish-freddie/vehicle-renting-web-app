@@ -29,6 +29,12 @@ const decodeToken = (token: string): User | null => {
         .join("")
     );
     const decoded = JSON.parse(jsonPayload);
+    
+    // Check if token is expired
+    if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+      return null;
+    }
+    
     return {
       id: decoded.id,
       name: decoded.name,

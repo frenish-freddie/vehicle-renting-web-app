@@ -9,6 +9,7 @@ import {
   FileImage, ArrowRight, Car, Info, Loader2, ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
+import Tesseract from "tesseract.js";
 
 type VerifStatus = "unsubmitted" | "pending" | "approved" | "rejected";
 
@@ -52,6 +53,7 @@ export default function DriverOnboardingPage() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
@@ -68,7 +70,33 @@ export default function DriverOnboardingPage() {
       .finally(() => setLoadingStatus(false));
   }, [token, router]);
 
-  const handleFileSelect = (selectedFile: File) => {
+  const handleFileSelect = async (selectedFile: File) => {
+    if (!selectedFile) return;
+
+    if (!selectedFile.type.startsWith("application/pdf")) {
+      setIsVerifying(true);
+      setUploadError(null);
+      setFile(null);
+      setPreview(null);
+      try {
+        const result = await Tesseract.recognize(selectedFile, "eng");
+        const text = result.data.text.toLowerCase();
+        const hasKeywords = text.includes("driving licence") || text.includes("driving license") || text.includes("dl no") || text.includes("transport department") || text.includes("union of india");
+
+        if (!hasKeywords) {
+          setUploadError("Invalid document detected. Please upload a clear image of a valid Driving License.");
+          setIsVerifying(false);
+          return;
+        }
+      } catch (err) {
+        console.error("OCR Error:", err);
+        setUploadError("Failed to verify image. Please try another clear photo.");
+        setIsVerifying(false);
+        return;
+      }
+      setIsVerifying(false);
+    }
+
     setFile(selectedFile);
     setUploadError(null);
     if (selectedFile.type.startsWith("image/")) {
@@ -185,7 +213,12 @@ export default function DriverOnboardingPage() {
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
                 />
 
-                {uploaded ? (
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="h-10 w-10 text-violet-400 animate-spin" />
+                    <p className="text-sm font-semibold text-violet-400">Verifying document...</p>
+                  </>
+                ) : uploaded ? (
                   <>
                     <CheckCircle2 className="h-10 w-10 text-emerald-400" />
                     <p className="text-sm font-semibold text-emerald-400">License uploaded successfully!</p>

@@ -5,15 +5,31 @@ import Link from "next/link";
 import { useAuthStore } from "@/store/authStore";
 import api from "@/services/api";
 import { LayoutDashboard, Car, Landmark, Clock, Settings, Search, Bell, User as UserIcon, TrendingUp, ArrowRight, LogOut, CheckCircle2, UploadCloud, AlertCircle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import ActiveTripCard from "@/components/trips/ActiveTripCard";
 import { useActiveTrips } from "@/hooks/useActiveTripStatus";
 
 export default function DriverDashboard() {
-  const { user, dashboardStats, isLoading, logout } = useAuthStore();
+  const { user, dashboardStats, fetchDashboardStats, isLoading, logout } = useAuthStore();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("Dashboard");
   const { activeTrips, isLoading: activeTripsLoading, refetch } = useActiveTrips();
+  const [acceptingTripId, setAcceptingTripId] = useState<number | null>(null);
 
-  if (isLoading || !dashboardStats || !user) {
+  const handleAcceptTrip = async (tripId: number) => {
+    setAcceptingTripId(tripId);
+    try {
+      await api.post(`/api/drivers/trips/${tripId}/accept`);
+      await fetchDashboardStats();
+      refetch();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Failed to accept trip.");
+    } finally {
+      setAcceptingTripId(null);
+    }
+  };
+
+  if (isLoading || !user) {
     return (
       <div className="fixed inset-0 z-50 bg-[#F8F9FC] flex items-center justify-center">
          <div className="text-primary-dark animate-pulse font-bold text-xl tracking-widest">LOADING DRIVER DASHBOARD...</div>
@@ -21,7 +37,9 @@ export default function DriverDashboard() {
     );
   }
 
-  const { rating, total_trips, earnings, assigned_trips, verification_status } = dashboardStats;
+  if (!dashboardStats) return null;
+
+  const { rating, total_trips, earnings, available_requests, verification_status } = dashboardStats;
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#F8F9FC] flex overflow-hidden text-[#0F1923] font-sans">
@@ -193,7 +211,7 @@ export default function DriverDashboard() {
                   </div>
                   
                   <div className="space-y-4">
-                    {assigned_trips && assigned_trips.length > 0 ? assigned_trips.map((trip: any) => (
+                    {available_requests && available_requests.length > 0 ? available_requests.map((trip: any) => (
                       <div key={trip.id} className="bg-white border border-neutral-200 p-5 rounded-xl relative overflow-hidden group hover:shadow-md transition-all">
                         <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-accent-amber"></div>
                         <div className="flex justify-between items-start mb-3 pl-2">
@@ -209,10 +227,17 @@ export default function DriverDashboard() {
                           <span className="truncate flex-1 font-semibold text-right">{trip.delivery_address?.split(",")[0] || "Delivery"}</span>
                         </div>
                         <div className="flex gap-3 pl-2">
-                          <button className="flex-1 bg-primary-dark text-white font-bold py-2.5 rounded-lg text-sm hover:bg-black hover:-translate-y-0.5 transition-all duration-200 shadow-sm">
-                            Accept
+                          <button 
+                            onClick={() => handleAcceptTrip(trip.id)}
+                            disabled={acceptingTripId === trip.id}
+                            className="flex-1 bg-primary-dark text-white font-bold py-2.5 rounded-lg text-sm hover:bg-black hover:-translate-y-0.5 transition-all duration-200 shadow-sm flex items-center justify-center disabled:opacity-50"
+                          >
+                            {acceptingTripId === trip.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Accept"}
                           </button>
-                          <button className="flex-1 border border-neutral-200 text-primary-dark bg-white font-bold py-2.5 rounded-lg text-sm hover:bg-neutral-50 transition-all duration-200 shadow-sm">
+                          <button 
+                            onClick={() => alert("Trip Details view for drivers is coming soon!")}
+                            className="flex-1 border border-neutral-200 text-primary-dark bg-white font-bold py-2.5 rounded-lg text-sm hover:bg-neutral-50 transition-all duration-200 shadow-sm"
+                          >
                             View Details
                           </button>
                         </div>

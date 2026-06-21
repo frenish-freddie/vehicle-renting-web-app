@@ -353,12 +353,30 @@ export default function HostOnboardingPage() {
               hint="Clear photo or scanned copy of your PAN card · JPEG, PNG, PDF · Max 8MB"
               accept="image/jpeg,image/png,image/webp,application/pdf"
               state={pan}
-              onChange={(file) =>
+              onChange={async (file) => {
+                if (!file.type.startsWith("application/pdf")) {
+                  setPan(s => ({ ...s, uploading: true, error: null }));
+                  try {
+                    const result = await Tesseract.recognize(file, "eng");
+                    const text = result.data.text.toLowerCase();
+                    const hasKeywords = text.includes("income tax") || text.includes("permanent account number") || text.includes("govt. of india");
+                    const hasPattern = /[a-z]{5}\d{4}[a-z]{1}/.test(text);
+
+                    if (!hasKeywords && !hasPattern) {
+                      setPan(s => ({ ...s, uploading: false, error: "Invalid document detected. Please upload a clear image of a valid PAN card.", file: null }));
+                      return;
+                    }
+                  } catch (err) {
+                    console.error("OCR Error:", err);
+                    setPan(s => ({ ...s, uploading: false, error: "Failed to verify image. Please try another clear photo.", file: null }));
+                    return;
+                  }
+                }
                 uploadDoc(file, "/api/host-kyc/upload-pan", setPan, (url, status) => {
                   setPanUrl(url);
                   setKycStatus(status);
-                })
-              }
+                });
+              }}
             />
 
             {/* Preview of already-uploaded PAN */}
