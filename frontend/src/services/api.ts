@@ -1,7 +1,6 @@
 import axios from "axios";
 
-// Standard local FastAPI backend URL
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 const mapBackendVehicleToFrontend = (v: any) => {
   if (!v || typeof v !== "object") return v;

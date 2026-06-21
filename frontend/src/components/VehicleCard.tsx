@@ -15,7 +15,7 @@ const CATEGORY_LABELS: { [key: string]: string } = {
   special: "Special",
 };
 
-const BACKEND = "http://127.0.0.1:8000";
+const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const toAbsUrl = (url: string | null | undefined) => {
   if (!url) return "/vehicles/placeholder.jpg";
   if (url.startsWith("http")) return url;

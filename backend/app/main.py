@@ -25,10 +25,21 @@ static_dir.mkdir(parents=True, exist_ok=True)
 (static_dir / "vehicle_docs").mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
+origins = [
+    "http://localhost:3000", "http://127.0.0.1:3000", 
+    "http://localhost:3001", "http://127.0.0.1:3001", 
+    "http://localhost:3002", "http://127.0.0.1:3002", 
+    "http://localhost:3003", "http://127.0.0.1:3003"
+]
+
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    origins.append(frontend_url)
+
 # CORS Policy configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001", "http://localhost:3002", "http://127.0.0.1:3002", "http://localhost:3003", "http://127.0.0.1:3003"],  # Permits Next.js dev server connections
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

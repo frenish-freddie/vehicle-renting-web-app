@@ -5,7 +5,7 @@ import { useAuthStore } from "@/store/authStore";
 import api from "@/services/api";
 import Link from "next/link";
 
-const BACKEND = "http://127.0.0.1:8000";
+const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 const toAbsUrl = (url: string | null | undefined) => {
   if (!url) return null;
   if (url.startsWith("http")) return url;
